@@ -28,7 +28,7 @@ services:
       - db-data:/var/lib/mysql
     healthcheck:
       # 초기화용 임시 서버(소켓 전용)를 정상으로 오판하지 않도록 TCP(127.0.0.1)로 검사한다.
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
       interval: 5s
       timeout: 3s
       retries: 20
