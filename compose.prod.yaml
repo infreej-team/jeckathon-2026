@@ -11,12 +11,12 @@ x-common: &common
 services:
   nginx:
     <<: *common
-    image: nginx:1.27-alpine
+    # 설정 파일은 이미지에 들어 있고, 인증서만 서버에서 마운트한다.
+    image: "${NGINX_IMAGE:?NGINX_IMAGE를 .env.prod에 지정해야 한다}"
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - client
@@ -37,8 +37,13 @@ services:
   server:
     <<: *common
     image: ${SERVER_IMAGE:-traefik/whoami:latest}
-    env_file: .env.prod
+    # .env.prod 전체를 넣지 않고 server에 필요한 값만 전달한다. 값이 늘어나면 여기에 추가한다.
     environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-jeckathon}
+      DB_USER: ${DB_USER:-jeckathon}
+      DB_PASSWORD: "${DB_PASSWORD}"
       # 임시 이미지(whoami) 설정이다. 실제 이미지로 교체하면 삭제한다.
       WHOAMI_PORT_NUMBER: 8080
       WHOAMI_NAME: server
@@ -68,7 +73,7 @@ services:
       - db-data:/var/lib/mysql
     healthcheck:
       # 초기화용 임시 서버(소켓 전용)를 정상으로 오판하지 않도록 TCP(127.0.0.1)로 검사한다.
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
       interval: 5s
       timeout: 3s
       retries: 20
