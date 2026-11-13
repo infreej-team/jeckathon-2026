@@ -5,7 +5,23 @@
 - 해커톤(Jeckathon 2026) 출품 서비스 저장소다. 서비스 주제와 스택은 아직 정하지 않았다.
 - 배포 대상은 AWS Lightsail 단일 서버이며, Docker Compose로 컨테이너를 실행하고 Nginx를 리버스 프록시로 둔다.
 - 도메인은 `jeckathon.infreej.dev`이고 Cloudflare로 DNS와 HTTPS를 처리한다.
-- 배포는 `main`에 병합하면 GitHub Actions가 `client/`, `server/`, `nginx/` 이미지를 빌드해 GHCR에 push하고, 서버에서 `docker compose -f compose.prod.yaml --env-file .env.prod pull`과 `up -d`로 반영한다. 서버에서는 빌드하지 않는다.
+- 배포는 `main`에 병합하면 GitHub Actions가 `client/`, `server/`, `nginx/` 이미지를 빌드해 GHCR에 push하고, 서버에 SSH로 접속해 `compose.prod.yaml`을 복사한 뒤 `docker compose -f compose.prod.yaml --env-file .env.prod pull`과 `up -d`로 반영한다. 서버에서는 빌드하지 않는다.
+- `main`에 병합한 코드는 바로 운영 서버에 나간다. 시연 직전에는 병합을 멈춘다.
+- 자동 배포는 `production` 환경 Secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_SSH_KNOWN_HOSTS`를 사용한다. 이 환경은 `main`에서만 쓸 수 있게 제한되어 있으므로 저장소 Secrets에 같은 값을 넣지 않는다. 서버의 `.env.prod`와 인증서는 자동 배포가 건드리지 않으므로 바꿀 때는 서버에서 직접 수정한다.
+- `compose.prod.yaml`에 새 환경 변수가 필요한 PR은 병합하기 전에 서버 `.env.prod`에 값을 먼저 추가한다. 값이 없으면 배포가 compose 검증 단계에서 멈춘다.
+- 롤백으로 `.env.prod`의 `IMAGE_TAG`를 sha 태그로 고정한 동안에는 병합해도 이미지가 바뀌지 않는다. `compose.prod.yaml`은 계속 최신본으로 덮어쓴다.
+
+## 임시 이미지를 실제 이미지로 교체
+
+- 현재 client와 server는 소스가 없어 임시 이미지(`traefik/whoami`)로 실행된다. `compose.prod.yaml`의 `WHOAMI_*` 환경 변수는 이 임시 이미지 전용 설정이다.
+- 실제 이미지는 다음 계약을 지킨다. client는 3000 포트에서 `/api`를 제외한 모든 경로를 처리한다. server는 8080 포트에서 `/api/*`를 처리하고 `GET /api/health`에 `200`으로 응답한다.
+- client와 server는 준비되는 대로 서비스별로 따로 교체한다. 아래 순서에서 이미지 변수와 `WHOAMI_*`는 교체하는 서비스의 것만 다룬다.
+  1. 해당 서비스의 소스와 `Dockerfile`을 `main`에 병합하고, Actions가 GHCR에 `latest` 태그를 붙였는지 확인한다.
+  2. 서버의 `.env.prod`에서 해당 서비스의 이미지 변수(`CLIENT_IMAGE` 또는 `SERVER_IMAGE`) 주석을 해제한다. 실제 이미지는 `WHOAMI_*` 환경 변수를 무시하므로, 이후 어떤 병합으로 자동 배포가 돌아도 실제 이미지로 전환된다. 바로 전환하려면 서버에서 `pull`과 `up -d`를 실행한다.
+  3. 후속 PR에서 `compose.prod.yaml`의 해당 서비스 `WHOAMI_*` 환경 변수를 삭제하고 병합한다.
+  4. 외부에서 `/`와 `/api/health` 응답을 확인한다.
+- 2번 없이 3번을 병합하면 whoami가 기본 포트(80)로 떠서 nginx가 `502`를 반환한다. 2번을 먼저 끝낸다.
+- 아직 GHCR에 없는 이미지의 변수를 해제하면 이후 모든 자동 배포가 pull 단계에서 멈춘다. 실행 중인 서비스는 유지된다. 1번의 빌드가 성공한 뒤에 2번을 한다.
 
 ## Git 브랜치 전략
 

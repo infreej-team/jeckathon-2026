@@ -54,7 +54,8 @@ services:
 
   db:
     <<: *common
-    image: mysql:8.4
+    # 패치 버전까지 고정한다. 움직이는 태그면 새 패치가 나올 때 무관한 배포에서도 db가 재시작된다.
+    image: mysql:8.4.13
     # compose.yaml과 compose.prod.yaml에서 같은 값을 유지한다.
     # Windows에서 마운트한 설정 파일은 권한 문제로 MySQL이 무시하므로 실행 옵션으로 지정한다.
     command:
