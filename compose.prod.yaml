@@ -50,11 +50,19 @@ services:
   db:
     <<: *common
     image: mysql:8.4
+    # compose.yaml과 compose.prod.yaml에서 같은 값을 유지한다.
+    # Windows에서 마운트한 설정 파일은 권한 문제로 MySQL이 무시하므로 실행 옵션으로 지정한다.
+    command:
+      - --innodb-buffer-pool-size=256M
+      - --max-connections=100
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+09:00
     environment:
       MYSQL_DATABASE: ${DB_NAME:-jeckathon}
       MYSQL_USER: ${DB_USER:-jeckathon}
-      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env.prod에 지정해야 한다}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD를 .env.prod에 지정해야 한다}
+      MYSQL_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD를 .env.prod에 지정해야 한다}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD를 .env.prod에 지정해야 한다}"
       TZ: Asia/Seoul
     volumes:
       - db-data:/var/lib/mysql
