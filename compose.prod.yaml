@@ -11,12 +11,12 @@ x-common: &common
 services:
   nginx:
     <<: *common
-    image: nginx:1.27-alpine
+    # 설정 파일은 이미지에 들어 있고, 인증서만 서버에서 마운트한다.
+    image: "${NGINX_IMAGE:?NGINX_IMAGE를 .env.prod에 지정해야 한다}"
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - client

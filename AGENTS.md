@@ -5,7 +5,7 @@
 - 해커톤(Jeckathon 2026) 출품 서비스 저장소다. 서비스 주제와 스택은 아직 정하지 않았다.
 - 배포 대상은 AWS Lightsail 단일 서버이며, Docker Compose로 컨테이너를 실행하고 Nginx를 리버스 프록시로 둔다.
 - 도메인은 `jeckathon.infreej.dev`이고 Cloudflare로 DNS와 HTTPS를 처리한다.
-- 배포는 `main`에 병합하면 GitHub Actions가 `client/`, `server/` 이미지를 빌드해 GHCR에 push하고, 서버에서 `docker compose -f compose.prod.yaml --env-file .env.prod pull`과 `up -d`로 반영한다. 서버에서는 빌드하지 않는다.
+- 배포는 `main`에 병합하면 GitHub Actions가 `client/`, `server/`, `nginx/` 이미지를 빌드해 GHCR에 push하고, 서버에서 `docker compose -f compose.prod.yaml --env-file .env.prod pull`과 `up -d`로 반영한다. 서버에서는 빌드하지 않는다.
 
 ## Git 브랜치 전략
 
