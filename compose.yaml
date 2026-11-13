@@ -1,0 +1,74 @@
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  nginx:
+    <<: *common
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - client
+      - server
+    mem_limit: 128m
+
+  # Contract: listen on port 3000, serve every path except /api
+  client:
+    <<: *common
+    image: ${CLIENT_IMAGE:-traefik/whoami:latest}
+    environment:
+      # Placeholder (whoami) settings. Remove when the real image is used.
+      WHOAMI_PORT_NUMBER: 3000
+      WHOAMI_NAME: client
+    mem_limit: 256m
+
+  # Contract: listen on port 8080, serve /api/*, respond 200 on GET /api/health
+  server:
+    <<: *common
+    image: ${SERVER_IMAGE:-traefik/whoami:latest}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Placeholder (whoami) settings. Remove when the real image is used.
+      WHOAMI_PORT_NUMBER: 8080
+      WHOAMI_NAME: server
+    depends_on:
+      db:
+        condition: service_healthy
+        required: false
+    mem_limit: 512m
+
+  # Optional: docker compose --profile db up -d
+  db:
+    <<: *common
+    image: mysql:8.4
+    profiles: ["db"]
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-jeckathon}
+      MYSQL_USER: ${DB_USER:-jeckathon}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
+      TZ: Asia/Seoul
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      # Use TCP (127.0.0.1) so the temporary init server (socket only) is not reported healthy
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    mem_limit: 512m
+
+volumes:
+  db-data:
