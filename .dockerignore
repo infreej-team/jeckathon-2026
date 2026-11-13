@@ -1,0 +1,52 @@
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+*.iml
+
+# Logs / Temp
+logs
+*.log
+tmp
+temp
+
+# Node
+**/node_modules
+**/dist
+**/.next
+**/coverage
+
+# Java / Gradle / Maven
+**/.gradle
+**/build
+**/target
+**/out
+
+# Python
+**/__pycache__
+**/.venv
+**/venv
+
+# Docker
+Dockerfile*
+compose*.yaml
+docker-compose*.yml
+.dockerignore
+
+# Docs
+*.md
