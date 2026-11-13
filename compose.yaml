@@ -6,6 +6,8 @@ x-common: &common
       max-size: "10m"
       max-file: "3"
 
+# 메모리 배분 (4GB 인스턴스): nginx 128m + client 512m + server 1g + db 1g = 약 2.6GB
+# 남은 약 1.4GB는 OS, Docker 데몬, 이미지 pull 작업에 쓴다.
 services:
   nginx:
     <<: *common
@@ -21,54 +23,49 @@ services:
       - server
     mem_limit: 128m
 
-  # Contract: listen on port 3000, serve every path except /api
+  # 계약: 3000 포트에서 요청을 받고, /api를 제외한 모든 경로를 처리한다.
   client:
     <<: *common
     image: ${CLIENT_IMAGE:-traefik/whoami:latest}
     environment:
-      # Placeholder (whoami) settings. Remove when the real image is used.
+      # 임시 이미지(whoami) 설정이다. 실제 이미지로 교체하면 삭제한다.
       WHOAMI_PORT_NUMBER: 3000
       WHOAMI_NAME: client
-    mem_limit: 256m
+    mem_limit: 512m
 
-  # Contract: listen on port 8080, serve /api/*, respond 200 on GET /api/health
+  # 계약: 8080 포트에서 요청을 받고, /api/*를 처리하며, GET /api/health에 200으로 응답한다.
   server:
     <<: *common
     image: ${SERVER_IMAGE:-traefik/whoami:latest}
-    env_file:
-      - path: .env
-        required: false
+    env_file: .env
     environment:
-      # Placeholder (whoami) settings. Remove when the real image is used.
+      # 임시 이미지(whoami) 설정이다. 실제 이미지로 교체하면 삭제한다.
       WHOAMI_PORT_NUMBER: 8080
       WHOAMI_NAME: server
     depends_on:
       db:
         condition: service_healthy
-        required: false
-    mem_limit: 512m
+    mem_limit: 1g
 
-  # Optional: docker compose --profile db up -d
   db:
     <<: *common
     image: mysql:8.4
-    profiles: ["db"]
     environment:
       MYSQL_DATABASE: ${DB_NAME:-jeckathon}
       MYSQL_USER: ${DB_USER:-jeckathon}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD를 .env에 지정해야 한다}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD를 .env에 지정해야 한다}
       TZ: Asia/Seoul
     volumes:
       - db-data:/var/lib/mysql
     healthcheck:
-      # Use TCP (127.0.0.1) so the temporary init server (socket only) is not reported healthy
+      # 초기화용 임시 서버(소켓 전용)를 정상으로 오판하지 않도록 TCP(127.0.0.1)로 검사한다.
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 3s
       retries: 20
       start_period: 30s
-    mem_limit: 512m
+    mem_limit: 1g
 
 volumes:
   db-data:
