@@ -30,11 +30,11 @@ final class RoomBucket {
 		return new TradeCount(acceptedBuy, acceptedSell);
 	}
 
-	synchronized DrainResult drain() {
+	synchronized TradeCount drain() {
 		if (byUser.isEmpty()) {
-			return DrainResult.EMPTY;
+			return TradeCount.ZERO;
 		}
-		DrainResult result = new DrainResult(new TradeCount(buy, sell), byUser);
+		TradeCount result = new TradeCount(buy, sell);
 		byUser.clear();
 		buy = 0;
 		sell = 0;
