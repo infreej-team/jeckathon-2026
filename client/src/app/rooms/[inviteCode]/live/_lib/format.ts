@@ -1,4 +1,5 @@
-import { LISTING_PRICE } from "./use-trading-session";
+import type { RoomStatus } from "@/lib/rooms";
+import { LISTING_PRICE } from "./use-live-market";
 
 const priceFormat = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const countFormat = new Intl.NumberFormat("ko-KR");
@@ -15,3 +16,9 @@ export function formatChange(price: number) {
 }
 
 export const isUp = (price: number) => price >= LISTING_PRICE;
+
+// 예: "LIVE 12'", 경기 전·종료
+export function statusLabel(status: RoomStatus, minute: number | null) {
+  if (status === "LIVE") return minute === null ? "LIVE" : `LIVE ${minute}'`;
+  return status === "WAITING" ? "경기 전" : "경기 종료";
+}

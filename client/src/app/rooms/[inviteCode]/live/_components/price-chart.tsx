@@ -1,8 +1,7 @@
-import { LISTING_PRICE, type MatchEvent, type Tick } from "../_lib/use-trading-session";
+import { LISTING_PRICE, type Tick } from "../_lib/use-live-market";
 
 type Props = {
   ticks: Tick[];
-  events?: MatchEvent[];
   lineColor: string;
   fillColor?: string;
   baselineColor: string;
@@ -23,14 +22,18 @@ function project(ticks: Tick[]) {
   return { x, y };
 }
 
-export function PriceChart({ ticks, events = [], lineColor, fillColor, baselineColor, baselineLabel, className }: Props) {
+export function PriceChart({ ticks, lineColor, fillColor, baselineColor, baselineLabel, className }: Props) {
+  if (ticks.length === 0) {
+    return (
+      <div className={`grid place-items-center text-xs text-muted ${className ?? ""}`}>첫 체결을 기다리는 중이에요</div>
+    );
+  }
   const { x, y } = project(ticks);
   const points = ticks.map((t, i) => `${x(i)},${y(t.price)}`);
   const line = `M${points.join(" L")}`;
   const area = `${line} L100,100 L0,100 Z`;
   const baseY = y(LISTING_PRICE);
   const lastIndex = ticks.length - 1;
-  const firstSeq = ticks[0].seq;
 
   return (
     <div className={`relative ${className ?? ""}`}>
@@ -65,25 +68,6 @@ export function PriceChart({ ticks, events = [], lineColor, fillColor, baselineC
         </span>
       )}
 
-      {events.map((event) => {
-        const i = event.seq - firstSeq;
-        return (
-          <div key={event.seq} className="absolute" style={{ left: `${x(i)}%`, top: `${y(ticks[i].price)}%` }}>
-            <span
-              className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 bg-white"
-              style={{ borderColor: "var(--color-ink)" }}
-            />
-            <span
-              className={`absolute -translate-x-1/2 whitespace-nowrap rounded-md border-2 border-ink px-1.5 py-0.5 text-[11px] font-bold text-white shadow-[2px_2px_0_var(--color-ink)] ${
-                event.side === "sell" ? "bg-sell" : "bg-buy"
-              } bottom-2`}
-            >
-              {event.label}
-            </span>
-          </div>
-        );
-      })}
-
       <span
         className="absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 transition-[top] duration-300"
         style={{ left: `${x(lastIndex)}%`, top: `${y(ticks[lastIndex].price)}%`, background: lineColor }}
@@ -103,7 +87,9 @@ export function VolumeBars({ ticks }: { ticks: Tick[] }) {
       {ticks.map((t) => (
         <span
           key={t.seq}
-          className={`flex-1 rounded-t-[2px] ${t.buy >= t.sell ? "bg-buy" : "bg-sell"}`}
+          className={`flex-1 rounded-t-[2px] ${
+            t.buy + t.sell === 0 ? "bg-neutral-200" : t.buy >= t.sell ? "bg-buy" : "bg-sell"
+          }`}
           style={{ height: `${Math.max(((t.buy + t.sell) / max) * 100, 8)}%` }}
         />
       ))}
