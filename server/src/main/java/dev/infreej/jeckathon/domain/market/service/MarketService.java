@@ -8,15 +8,16 @@ import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.domain.PageRequest;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import dev.infreej.jeckathon.domain.market.dto.MarketTickMessage;
 import dev.infreej.jeckathon.domain.market.dto.MarketTickResponse;
 import dev.infreej.jeckathon.domain.market.entity.MarketTick;
 import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
+import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 import dev.infreej.jeckathon.domain.trade.service.TradeService;
 import dev.infreej.jeckathon.domain.trade.service.TradeService.TradeSnapshot;
@@ -33,7 +34,7 @@ public class MarketService {
 	private final MarketTickRepository repository;
 	private final RoomService roomService;
 	private final TradeService tradeService;
-	private final SimpMessagingTemplate messaging;
+	private final RoomSessionRegistry roomSessions;
 
 	private final Map<Long, PendingTick> pendingTicks = new HashMap<>();
 
@@ -51,7 +52,7 @@ public class MarketService {
 				if (!roomService.getByInviteCode(room.getInviteCode()).isAcceptingTrades()) {
 					continue;
 				}
-				if (!savePendingTick(room.getId())) {
+				if (!savePendingTick(room)) {
 					recordTick(room, false);
 				}
 			} catch (RuntimeException failure) {
@@ -62,7 +63,7 @@ public class MarketService {
 
 	// Call after the room is no longer active and trade intake has closed.
 	public synchronized void finishRoom(Room room) {
-		savePendingTick(room.getId());
+		savePendingTick(room);
 		recordTick(room, true);
 		tradeService.clearRoom(room.getInviteCode());
 	}
@@ -94,10 +95,11 @@ public class MarketService {
 		);
 
 		pendingTicks.put(roomId, tick);
-		savePendingTick(roomId);
+		savePendingTick(room);
 	}
 
-	private boolean savePendingTick(Long roomId) {
+	private boolean savePendingTick(Room room) {
+		Long roomId = room.getId();
 		PendingTick tick = pendingTicks.get(roomId);
 		if (tick == null) {
 			return false;
@@ -112,7 +114,7 @@ public class MarketService {
 		pendingTicks.remove(roomId);
 
 		try {
-			messaging.convertAndSend("/topic/rooms/" + roomId + "/market", response);
+			roomSessions.broadcast(room.getInviteCode(), MarketTickMessage.of(room.getInviteCode(), response));
 		} catch (RuntimeException failure) {
 			log.warn("Could not broadcast market tick {} for room {}", response.tickId(), roomId, failure);
 		}
