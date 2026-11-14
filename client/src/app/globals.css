@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "flag-icons/css/flag-icons.min.css";
 
 :root {
   --background: #ffffff;
@@ -11,11 +12,16 @@
   --font-sans: var(--font-noto-sans-kr);
   --font-display: var(--font-black-han-sans);
   --font-num: var(--font-jetbrains-mono);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
 /* 한국 증시 관례: 매수·상승은 빨강, 매도·하락은 파랑 */
 @theme {
   --color-ink: #111111;
+  /* 로비·응원 팀 고르기 화면 */
+  --color-brand: #ffd338;
+  --color-up: #e8344e;
+  --color-down: #2f6bff;
   --color-buy: #e8262f;
   --color-buy-soft: #ff6b7a;
   --color-sell: #2d5be3;
@@ -75,4 +81,21 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* 로비 상단 시세 띠 */
+.ticker {
+  animation: ticker 30s linear infinite;
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    animation: none;
+  }
 }
