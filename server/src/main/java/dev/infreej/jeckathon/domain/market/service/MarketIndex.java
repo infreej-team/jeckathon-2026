@@ -3,7 +3,7 @@ package dev.infreej.jeckathon.domain.market.service;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
-import dev.infreej.jeckathon.domain.trade.TradeCount;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
 final class MarketIndex {
 

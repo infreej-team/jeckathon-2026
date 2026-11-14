@@ -17,9 +17,9 @@ import dev.infreej.jeckathon.domain.market.entity.MarketTick;
 import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
-import dev.infreej.jeckathon.domain.trade.TradeCount;
-import dev.infreej.jeckathon.domain.trade.TradeService;
-import dev.infreej.jeckathon.domain.trade.TradeService.TradeSnapshot;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import dev.infreej.jeckathon.domain.trade.service.TradeService;
+import dev.infreej.jeckathon.domain.trade.service.TradeService.TradeSnapshot;
 import dev.infreej.jeckathon.global.response.PageResponse;
 
 import lombok.RequiredArgsConstructor;

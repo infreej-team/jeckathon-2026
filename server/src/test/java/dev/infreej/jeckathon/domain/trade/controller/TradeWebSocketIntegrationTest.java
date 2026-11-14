@@ -18,18 +18,14 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
-import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 import dev.infreej.jeckathon.domain.trade.service.TradeService;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = NoDb.EXCLUDE)
+// 실제 DB(로컬은 compose.yaml, CI는 postgres 서비스)에 붙여 전체 빈을 연결한 상태로 띄운다.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TradeWebSocketIntegrationTest {
 	@Value("${local.server.port}") int port;
 	@MockitoBean TradeService tradeService;
-	// DB 자동 설정을 뺐으므로 저장소 빈은 목으로 채운다.
-	@MockitoBean RoomRepository roomRepository;
-	@MockitoBean MarketTickRepository marketTickRepository;
 
 	@Test
 	void 접속해서_trade를_보내면_ack를_받는다() throws Exception {
