@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -16,11 +15,12 @@ import dev.infreej.jeckathon.domain.market.dto.MarketTickMessage;
 import dev.infreej.jeckathon.domain.market.dto.MarketTickResponse;
 import dev.infreej.jeckathon.domain.market.entity.MarketTick;
 import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
-import dev.infreej.jeckathon.domain.market.service.MarketRoomSource.ActiveRoom;
-import dev.infreej.jeckathon.domain.market.service.MarketTradeSource.TradeVolume;
 import dev.infreej.jeckathon.domain.room.entity.Room;
-import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
+import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import dev.infreej.jeckathon.domain.trade.service.TradeService;
+import dev.infreej.jeckathon.domain.trade.service.TradeService.TradeSnapshot;
 import dev.infreej.jeckathon.global.response.PageResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -32,14 +32,11 @@ import lombok.extern.slf4j.Slf4j;
 public class MarketService {
 
 	private final MarketTickRepository repository;
-	private final ObjectProvider<MarketRoomSource> roomSources;
-	private final ObjectProvider<MarketTradeSource> tradeSources;
-	private final RoomRepository roomRepository;
+	private final RoomService roomService;
+	private final TradeService tradeService;
 	private final RoomSessionRegistry roomSessions;
 
 	private final Map<Long, PendingTick> pendingTicks = new HashMap<>();
-	// 초대 코드는 바뀌지 않으므로 방마다 한 번만 조회한다.
-	private final Map<Long, String> inviteCodes = new HashMap<>();
 
 	public PageResponse<MarketTickResponse> getTicks(Long roomId, int page, int size) {
 		return PageResponse.from(
@@ -50,36 +47,31 @@ public class MarketService {
 
 	@Scheduled(fixedRate = 1_000)
 	synchronized void recordActiveRooms() {
-		MarketRoomSource rooms = roomSources.getIfAvailable();
-		MarketTradeSource trades = tradeSources.getIfAvailable();
-		if (rooms == null || trades == null) {
-			return;
-		}
-
-		for (ActiveRoom room : rooms.findActiveRooms()) {
+		for (Room room : roomService.getLiveRooms()) {
 			try {
-				if (!savePendingTick(room.roomId())) {
-					recordTick(room.roomId(), room.participantCount(), trades, false);
+				if (!savePendingTick(room.getId(), room.getInviteCode())) {
+					recordTick(room.getId(), room.getInviteCode(), false);
 				}
 			} catch (RuntimeException failure) {
-				log.error("Could not record market tick for room {}", room.roomId(), failure);
+				log.error("Could not record market tick for room {}", room.getId(), failure);
 			}
 		}
 	}
 
 	// Call after the room is no longer active and trade intake has closed.
-	public synchronized void finishRoom(Long roomId, int participantCount) {
-		MarketTradeSource trades = tradeSources.getObject();
-		savePendingTick(roomId);
-		recordTick(roomId, participantCount, trades, true);
+	public synchronized void finishRoom(Long roomId, String inviteCode) {
+		savePendingTick(roomId, inviteCode);
+		recordTick(roomId, inviteCode, true);
 	}
 
-	private void recordTick(Long roomId, int participantCount, MarketTradeSource trades, boolean skipEmpty) {
+	private void recordTick(Long roomId, String inviteCode, boolean skipEmpty) {
 		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickedAtDesc(roomId);
-		TradeVolume volume = trades.drain(roomId);
-		if (skipEmpty && volume.isEmpty()) {
+		TradeSnapshot snapshot = tradeService.drainWithParticipants(roomId);
+		TradeCount volume = snapshot.count();
+		if (skipEmpty && TradeCount.ZERO.equals(volume)) {
 			return;
 		}
+		int participantCount = snapshot.participantCount();
 
 		Instant tickedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 		Instant previousTime = previous.map(MarketTick::getTickedAt).orElse(Instant.MIN);
@@ -91,16 +83,16 @@ public class MarketService {
 		PendingTick tick = new PendingTick(
 			tickedAt,
 			MarketIndex.calculate(previousValue, volume, participantCount).doubleValue(),
-			Math.toIntExact(volume.buyCount()),
-			Math.toIntExact(volume.sellCount()),
+			volume.buy(),
+			volume.sell(),
 			participantCount
 		);
 
 		pendingTicks.put(roomId, tick);
-		savePendingTick(roomId);
+		savePendingTick(roomId, inviteCode);
 	}
 
-	private boolean savePendingTick(Long roomId) {
+	private boolean savePendingTick(Long roomId, String inviteCode) {
 		PendingTick tick = pendingTicks.get(roomId);
 		if (tick == null) {
 			return false;
@@ -115,8 +107,6 @@ public class MarketService {
 		pendingTicks.remove(roomId);
 
 		try {
-			String inviteCode = inviteCodes.computeIfAbsent(roomId,
-				id -> roomRepository.findById(id).map(Room::getInviteCode).orElseThrow());
 			roomSessions.broadcast(inviteCode, MarketTickMessage.of(inviteCode, response));
 		} catch (RuntimeException failure) {
 			log.warn("Could not broadcast market tick {} for room {}", response.tickId(), roomId, failure);

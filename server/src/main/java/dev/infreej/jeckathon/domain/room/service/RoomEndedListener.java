@@ -15,12 +15,11 @@ public class RoomEndedListener {
 
 	private final MarketService marketService;
 	private final TradeService tradeService;
-	private final RoomSessionRegistry registry;
 
 	@TransactionalEventListener
 	public void onRoomEnded(RoomEndedEvent event) {
 		try {
-			marketService.finishRoom(event.roomId(), registry.participantCount(event.inviteCode()));
+			marketService.finishRoom(event.roomId(), event.inviteCode());
 		} finally {
 			tradeService.clearRoom(event.roomId());
 		}

@@ -99,7 +99,7 @@ class TradeMessageHandlerTest {
 	}
 
 	static Room room(Long id, String inviteCode) {
-		Room room = new Room(inviteCode, "경기");
+		Room room = new Room(inviteCode, "경기", null);
 		ReflectionTestUtils.setField(room, "id", id);
 		return room;
 	}

@@ -3,7 +3,7 @@ package dev.infreej.jeckathon.domain.market.service;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
-import dev.infreej.jeckathon.domain.market.service.MarketTradeSource.TradeVolume;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
 final class MarketIndex {
 
@@ -16,8 +16,8 @@ final class MarketIndex {
 	private MarketIndex() {
 	}
 
-	static BigDecimal calculate(BigDecimal previous, TradeVolume volume, int participantCount) {
-		BigDecimal netBuy = BigDecimal.valueOf(volume.buyCount()).subtract(BigDecimal.valueOf(volume.sellCount()));
+	static BigDecimal calculate(BigDecimal previous, TradeCount volume, int participantCount) {
+		BigDecimal netBuy = BigDecimal.valueOf(volume.buy()).subtract(BigDecimal.valueOf(volume.sell()));
 		long maxClicks = (long) Math.max(participantCount, 1) * MAX_CLICKS_PER_PARTICIPANT;
 		BigDecimal ratio = netBuy.divide(BigDecimal.valueOf(maxClicks), PRECISION)
 			.max(BigDecimal.ONE.negate())
