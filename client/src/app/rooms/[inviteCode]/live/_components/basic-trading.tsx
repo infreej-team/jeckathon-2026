@@ -164,6 +164,14 @@ export function BasicTrading({ view, market, comments, onTapMode }: Props) {
           {notice ?? error}
         </p>
       )}
+      {view.status === "ENDED" && (
+        <Link
+          href={`/rooms/${view.inviteCode}/result`}
+          className="mt-3 flex h-12 items-center justify-center rounded-xl bg-ink text-sm font-bold text-white active:translate-y-px"
+        >
+          장 마감 결산 보기
+        </Link>
+      )}
 
       <div className="relative mt-auto grid grid-cols-2 gap-3 pt-4">
         <BurstLayer bursts={bursts}>

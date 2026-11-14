@@ -111,7 +111,13 @@ export function Lobby() {
 
         {views && views.length > 0 && now !== null && (
           <section className="mt-9">
-            <h2 className="font-display text-[22px] leading-none">오늘의 상장 경기</h2>
+            <div className="flex items-end justify-between gap-2">
+              <h2 className="font-display text-[22px] leading-none">오늘의 상장 경기</h2>
+              <Link href="/replays" className="flex items-center gap-1 text-xs font-bold">
+                명경기 순위
+                <ArrowIcon className="size-3.5" />
+              </Link>
+            </div>
             <ul className="mt-4 overflow-hidden rounded-2xl border-2 border-ink">
               {views.map((view) => (
                 <li key={view.room.inviteCode} className="border-b border-ink last:border-b-0">
@@ -232,10 +238,10 @@ function HotCard({ view, now }: { view: RoomView; now: number }) {
       </p>
 
       <Link
-        href={`/rooms/${room.inviteCode}`}
+        href={room.status === "ENDED" ? `/rooms/${room.inviteCode}/result` : `/rooms/${room.inviteCode}`}
         className="mt-4 flex h-14 items-center justify-center gap-2 rounded-xl bg-ink text-base font-bold text-white active:translate-y-px"
       >
-        응원석 들어가기
+        {room.status === "ENDED" ? "결산 보기" : "응원석 들어가기"}
         <ArrowIcon className="size-5" />
       </Link>
     </section>
@@ -263,7 +269,7 @@ function RoomRow({ view, now }: { view: RoomView; now: number }) {
 
   return (
     <Link
-      href={`/rooms/${room.inviteCode}`}
+      href={ended ? `/rooms/${room.inviteCode}/result` : `/rooms/${room.inviteCode}`}
       className={`flex items-center gap-2 px-3 py-3 ${ended ? "bg-neutral-100" : "bg-white"}`}
     >
       <div className="min-w-0 flex-1">
@@ -281,8 +287,7 @@ function RoomRow({ view, now }: { view: RoomView; now: number }) {
         <p className="mt-1.5 flex items-center gap-2 text-xs text-neutral-500">
           <StatusBadge room={room} now={now} />
           {ended ? (
-            // 결산 화면이 아직 없어 문구만 보여 준다.
-            <span>리포트 보기</span>
+            <span className="font-bold text-ink underline underline-offset-2">리포트 보기</span>
           ) : (
             <span>
               {waiting ? "대기 개미" : "개미"} {countFormat.format(room.participantCount)}
