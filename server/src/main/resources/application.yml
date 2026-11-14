@@ -20,3 +20,8 @@ server:
   port: 8080
   # nginx가 넘긴 X-Forwarded-* 헤더로 원래 요청의 스킴과 클라이언트 IP를 복원한다.
   forward-headers-strategy: native
+
+app:
+  websocket:
+    # 쉼표로 여러 개를 넣는다. 예: https://jeckathon.infreej.dev,http://localhost:3000
+    allowed-origins: ${WS_ALLOWED_ORIGINS:*}

@@ -1,0 +1,9 @@
+package dev.infreej.jeckathon.domain.trade.ws;
+
+public final class NoDb {
+	public static final String EXCLUDE = "spring.autoconfigure.exclude="
+			+ "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+			+ "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration,"
+			+ "org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration,"
+			+ "org.springframework.boot.data.jpa.autoconfigure.DataJpaRepositoriesAutoConfiguration";
+}
