@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
-
-import { TradingScreen } from "@/app/trade/_components/trading-screen";
+import { Suspense } from "react";
+import { LiveRoom } from "./_components/live-room";
 
 export const metadata: Metadata = {
-  title: "트레이딩 | 팬닥 FANDAQ",
+  title: "응원석 | 팬닥 FANDAQ",
 };
 
-// 응원 팀 고르기 화면에서 방에 입장하면 오는 트레이딩 화면.
-export default function RoomLivePage() {
-  return <TradingScreen />;
+// 응원 팀 고르기에서 "입장하기"를 누르면 오는 실시간 트레이딩 화면
+export default function LiveRoomPage() {
+  return (
+    <Suspense>
+      <LiveRoom />
+    </Suspense>
+  );
 }
