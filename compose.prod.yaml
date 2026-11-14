@@ -26,17 +26,13 @@ services:
   # 계약: 3000 포트에서 요청을 받고, /api를 제외한 모든 경로를 처리한다.
   client:
     <<: *common
-    image: ${CLIENT_IMAGE:-traefik/whoami:latest}
-    environment:
-      # 임시 이미지(whoami) 설정이다. 실제 이미지로 교체하면 삭제한다.
-      WHOAMI_PORT_NUMBER: 3000
-      WHOAMI_NAME: client
+    image: "${CLIENT_IMAGE:?CLIENT_IMAGE를 .env.prod에 지정해야 한다}"
     mem_limit: 512m
 
   # 계약: 8080 포트에서 요청을 받고, /api/*를 처리하며, GET /api/health에 200으로 응답한다.
   server:
     <<: *common
-    image: ${SERVER_IMAGE:-traefik/whoami:latest}
+    image: "${SERVER_IMAGE:?SERVER_IMAGE를 .env.prod에 지정해야 한다}"
     # .env.prod 전체를 넣지 않고 server에 필요한 값만 전달한다. 값이 늘어나면 여기에 추가한다.
     environment:
       DB_HOST: db
@@ -44,9 +40,6 @@ services:
       DB_NAME: ${DB_NAME:-jeckathon}
       DB_USER: ${DB_USER:-jeckathon}
       DB_PASSWORD: "${DB_PASSWORD}"
-      # 임시 이미지(whoami) 설정이다. 실제 이미지로 교체하면 삭제한다.
-      WHOAMI_PORT_NUMBER: 8080
-      WHOAMI_NAME: server
     depends_on:
       db:
         condition: service_healthy
