@@ -4,16 +4,22 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import lombok.RequiredArgsConstructor;
 
-// 방별 매수·매도 횟수를 1초 구간 단위로 모은다. 방 존재·참여자 확인은 방 도메인이 생기면 applyTrade에 다시 넣는다.
+// 방별 매수·매도 횟수를 1초 구간 단위로 모은다.
 @Service
+@RequiredArgsConstructor
 public class TradeService {
 
+	private final RoomService roomService;
 	private final ConcurrentMap<String, RoomBucket> buckets = new ConcurrentHashMap<>();
 
 	/** 한도를 적용해 실제로 반영한 횟수를 반환한다. 반영하지 않으면 {@link TradeCount#ZERO}. */
+	@Transactional
 	public TradeCount applyTrade(String roomId, String userId, TradeCount request) {
 		if (request == null || roomId == null || userId == null) {
 			return TradeCount.ZERO;
@@ -21,6 +27,10 @@ public class TradeService {
 		int buy = Math.max(request.buy(), 0);
 		int sell = Math.max(request.sell(), 0);
 		if (buy == 0 && sell == 0) {
+			return TradeCount.ZERO;
+		}
+		// 종료 요청과 동일한 방 행을 잠근 상태에서 카운터에 반영한다.
+		if (!roomService.getByInviteCodeForUpdate(roomId).isAcceptingTrades()) {
 			return TradeCount.ZERO;
 		}
 		while (true) {
