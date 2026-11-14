@@ -1,7 +1,9 @@
-package dev.infreej.jeckathon.domain.trade;
+package dev.infreej.jeckathon.domain.trade.service;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
 /** 방 하나의 현재 집계 구간. 모든 접근은 이 객체의 모니터 락 안에서 일어난다. */
 final class RoomBucket {

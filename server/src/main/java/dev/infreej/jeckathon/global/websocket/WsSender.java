@@ -28,6 +28,10 @@ public class WsSender {
 	}
 
 	public void send(WebSocketSession session, Object message) {
+		// 닫힌 세션을 다시 등록하면 unregister 뒤에 데코레이터가 남는다.
+		if (!session.isOpen()) {
+			return;
+		}
 		WebSocketSession target = sessions.computeIfAbsent(session.getId(), id -> decorate(session));
 		if (!target.isOpen()) {
 			return;

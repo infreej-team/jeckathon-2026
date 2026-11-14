@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.domain.trade;
+package dev.infreej.jeckathon.domain.trade.dto;
 
 public record TradeCount(int buy, int sell) {
 

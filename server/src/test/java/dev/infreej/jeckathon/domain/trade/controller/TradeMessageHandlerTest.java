@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.domain.trade.ws;
+package dev.infreej.jeckathon.domain.trade.controller;
 
 import static dev.infreej.jeckathon.global.websocket.FakeSessions.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -8,8 +8,8 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.WebSocketSession;
 
-import dev.infreej.jeckathon.domain.trade.TradeCount;
-import dev.infreej.jeckathon.domain.trade.TradeService;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import dev.infreej.jeckathon.domain.trade.service.TradeService;
 import dev.infreej.jeckathon.global.websocket.WsSender;
 import tools.jackson.databind.JsonNode;
 
