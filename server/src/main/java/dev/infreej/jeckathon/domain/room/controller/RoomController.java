@@ -31,7 +31,7 @@ public class RoomController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public RoomResponse create(@Valid @RequestBody RoomCreateRequest request) {
-		return RoomResponse.from(roomService.create(request.name()));
+		return RoomResponse.from(roomService.create(request.matchId(), request.name()));
 	}
 
 	@GetMapping("/{inviteCode}")

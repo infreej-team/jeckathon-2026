@@ -7,6 +7,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import dev.infreej.jeckathon.domain.match.entity.Match;
+import dev.infreej.jeckathon.domain.match.service.MatchService;
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.entity.RoomStatus;
 import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
@@ -24,11 +26,14 @@ public class RoomService {
 	private static final int INVITE_CODE_LENGTH = 8;
 
 	private final RoomRepository roomRepository;
+	private final MatchService matchService;
 	private final SecureRandom random = new SecureRandom();
 
 	@Transactional
-	public Room create(String name) {
-		return roomRepository.save(new Room(generateInviteCode(), name));
+	public Room create(Long matchId, String name) {
+		Match match = matchService.getMatch(matchId);
+		String roomName = name == null || name.isBlank() ? match.getTeam1() + " vs " + match.getTeam2() : name.strip();
+		return roomRepository.save(new Room(generateInviteCode(), roomName, match));
 	}
 
 	// 다른 도메인이 방을 찾을 때도 이 메서드를 쓴다.
