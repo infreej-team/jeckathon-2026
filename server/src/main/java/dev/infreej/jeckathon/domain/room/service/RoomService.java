@@ -45,7 +45,7 @@ public class RoomService {
 	// 거래·코멘트처럼 경기 중에만 받는 요청에서 쓴다.
 	public Room getLiveByInviteCode(String inviteCode) {
 		Room room = getByInviteCode(inviteCode);
-		if (room.getStatus() != RoomStatus.LIVE) {
+		if (!room.isAcceptingTrades()) {
 			throw new BusinessException(ErrorCode.ROOM_NOT_LIVE);
 		}
 		return room;
@@ -53,12 +53,12 @@ public class RoomService {
 
 	// 1초 집계 대상인 방 목록
 	public List<Room> getLiveRooms() {
-		return roomRepository.findAllByStatus(RoomStatus.LIVE);
+		return roomRepository.findAllByStatusAndEndedAtIsNull(RoomStatus.LIVE);
 	}
 
 	@Transactional
 	public Room start(String inviteCode) {
-		Room room = getByInviteCode(inviteCode);
+		Room room = getByInviteCodeForUpdate(inviteCode);
 		if (room.getStatus() != RoomStatus.WAITING) {
 			throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "대기 중인 방만 시작할 수 있습니다.");
 		}
@@ -67,13 +67,29 @@ public class RoomService {
 	}
 
 	@Transactional
-	public Room end(String inviteCode) {
-		Room room = getByInviteCode(inviteCode);
-		if (room.getStatus() != RoomStatus.LIVE) {
+	public Room beginEnd(String inviteCode) {
+		Room room = getByInviteCodeForUpdate(inviteCode);
+		if (room.getStatus() == RoomStatus.WAITING) {
 			throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "진행 중인 방만 종료할 수 있습니다.");
 		}
-		room.end(Instant.now());
+		if (room.isAcceptingTrades()) {
+			room.beginEnd(Instant.now());
+		}
 		return room;
+	}
+
+	@Transactional
+	public Room completeEnd(String inviteCode, double changeRate, double volatility, Double replayScore) {
+		Room room = getByInviteCodeForUpdate(inviteCode);
+		if (room.getStatus() != RoomStatus.ENDED) {
+			room.completeEnd(changeRate, volatility, replayScore);
+		}
+		return room;
+	}
+
+	public Room getByInviteCodeForUpdate(String inviteCode) {
+		return roomRepository.findByInviteCodeForUpdate(inviteCode)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 	}
 
 	private String generateInviteCode() {
