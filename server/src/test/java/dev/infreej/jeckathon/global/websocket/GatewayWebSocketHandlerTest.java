@@ -24,7 +24,7 @@ class GatewayWebSocketHandlerTest {
 			received.add(p);
 		}
 	};
-	GatewayWebSocketHandler gateway = new GatewayWebSocketHandler(List.of(echo), new WsSender(MAPPER), MAPPER);
+	GatewayWebSocketHandler gateway = new GatewayWebSocketHandler(List.of(echo), List.of(), new WsSender(MAPPER), MAPPER);
 	WebSocketSession session = session("s1", "u1");
 
 	@Test
@@ -49,7 +49,7 @@ class GatewayWebSocketHandlerTest {
 
 	@Test
 	void type이_겹치는_처리기가_있으면_시작하지_않는다() {
-		assertThatThrownBy(() -> new GatewayWebSocketHandler(List.of(echo, echo), new WsSender(MAPPER), MAPPER))
+		assertThatThrownBy(() -> new GatewayWebSocketHandler(List.of(echo, echo), List.of(), new WsSender(MAPPER), MAPPER))
 				.isInstanceOf(IllegalStateException.class);
 	}
 }
