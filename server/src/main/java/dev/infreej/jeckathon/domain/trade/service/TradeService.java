@@ -4,23 +4,33 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import lombok.RequiredArgsConstructor;
 
-// 방별 매수·매도 횟수를 1초 구간 단위로 모은다. 방 입장·진행 여부는 호출하는 쪽(TradeMessageHandler)이 확인한다.
+// 방별 매수·매도 횟수를 1초 구간 단위로 모은다.
 @Service
+@RequiredArgsConstructor
 public class TradeService {
 
-	private final ConcurrentMap<Long, RoomBucket> buckets = new ConcurrentHashMap<>();
+	private final RoomService roomService;
+	private final ConcurrentMap<String, RoomBucket> buckets = new ConcurrentHashMap<>();
 
 	/** 한도를 적용해 실제로 반영한 횟수를 반환한다. 반영하지 않으면 {@link TradeCount#ZERO}. */
-	public TradeCount applyTrade(Long roomId, String userId, TradeCount request) {
+	@Transactional
+	public TradeCount applyTrade(String roomId, String userId, TradeCount request) {
 		if (request == null || roomId == null || userId == null) {
 			return TradeCount.ZERO;
 		}
 		int buy = Math.max(request.buy(), 0);
 		int sell = Math.max(request.sell(), 0);
 		if (buy == 0 && sell == 0) {
+			return TradeCount.ZERO;
+		}
+		// 종료 요청과 동일한 방 행을 잠근 상태에서 카운터에 반영한다.
+		if (!roomService.getByInviteCodeForUpdate(roomId).isAcceptingTrades()) {
 			return TradeCount.ZERO;
 		}
 		while (true) {
@@ -32,11 +42,11 @@ public class TradeService {
 	}
 
 	/** 현재 집계 구간의 방 합계를 돌려주고 0으로 초기화한다. 거래가 없던 방은 {@link TradeCount#ZERO}. */
-	public TradeCount drain(Long roomId) {
+	public TradeCount drain(String roomId) {
 		return drainWithParticipants(roomId).count();
 	}
 
-	public TradeSnapshot drainWithParticipants(Long roomId) {
+	public TradeSnapshot drainWithParticipants(String roomId) {
 		RoomBucket bucket = roomId == null ? null : buckets.get(roomId);
 		return bucket == null ? TradeSnapshot.EMPTY : bucket.drain();
 	}
@@ -45,7 +55,7 @@ public class TradeService {
 		static final TradeSnapshot EMPTY = new TradeSnapshot(TradeCount.ZERO, 0);
 	}
 
-	public void clearRoom(Long roomId) {
+	public void clearRoom(String roomId) {
 		if (roomId == null) {
 			return;
 		}

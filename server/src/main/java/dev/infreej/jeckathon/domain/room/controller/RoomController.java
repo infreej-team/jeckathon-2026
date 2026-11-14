@@ -13,6 +13,7 @@ import dev.infreej.jeckathon.domain.room.dto.RoomCreateRequest;
 import dev.infreej.jeckathon.domain.room.dto.RoomResponse;
 import dev.infreej.jeckathon.domain.room.dto.RoomStatusMessage;
 import dev.infreej.jeckathon.domain.room.entity.Room;
+import dev.infreej.jeckathon.domain.room.service.RoomEndService;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 public class RoomController {
 
 	private final RoomService roomService;
+	private final RoomEndService roomEndService;
 	private final RoomSessionRegistry roomSessionRegistry;
 
 	@PostMapping
@@ -48,7 +50,7 @@ public class RoomController {
 
 	@PostMapping("/{inviteCode}/end")
 	public RoomResponse end(@PathVariable String inviteCode) {
-		Room room = roomService.end(inviteCode);
+		Room room = roomEndService.end(inviteCode);
 		roomSessionRegistry.broadcast(room.getInviteCode(), RoomStatusMessage.from(room));
 		return RoomResponse.from(room);
 	}

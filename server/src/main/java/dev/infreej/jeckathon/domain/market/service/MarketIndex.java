@@ -5,9 +5,9 @@ import java.math.MathContext;
 
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
-final class MarketIndex {
+public final class MarketIndex {
 
-	static final BigDecimal INITIAL_VALUE = new BigDecimal("100.00");
+	public static final BigDecimal INITIAL_VALUE = new BigDecimal("100.00");
 
 	private static final int MAX_CLICKS_PER_PARTICIPANT = 3;
 	private static final BigDecimal MAX_CHANGE_RATE = new BigDecimal("0.02");

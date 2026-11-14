@@ -74,8 +74,19 @@ public class Room {
 		this.startedAt = startedAt;
 	}
 
-	public void end(Instant endedAt) {
-		this.status = RoomStatus.ENDED;
+	// 종료 시각이 기록된 LIVE 방은 마지막 시세와 결산을 저장하는 중이다.
+	public void beginEnd(Instant endedAt) {
 		this.endedAt = endedAt;
+	}
+
+	public boolean isAcceptingTrades() {
+		return status == RoomStatus.LIVE && endedAt == null;
+	}
+
+	public void completeEnd(double changeRate, double volatility, Double replayScore) {
+		this.changeRate = changeRate;
+		this.volatility = volatility;
+		this.replayScore = replayScore;
+		this.status = RoomStatus.ENDED;
 	}
 }

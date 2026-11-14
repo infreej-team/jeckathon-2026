@@ -49,8 +49,11 @@ public class MarketService {
 	synchronized void recordActiveRooms() {
 		for (Room room : roomService.getLiveRooms()) {
 			try {
-				if (!savePendingTick(room.getId(), room.getInviteCode())) {
-					recordTick(room.getId(), room.getInviteCode(), false);
+				if (!roomService.getByInviteCode(room.getInviteCode()).isAcceptingTrades()) {
+					continue;
+				}
+				if (!savePendingTick(room)) {
+					recordTick(room, false);
 				}
 			} catch (RuntimeException failure) {
 				log.error("Could not record market tick for room {}", room.getId(), failure);
@@ -59,14 +62,17 @@ public class MarketService {
 	}
 
 	// Call after the room is no longer active and trade intake has closed.
-	public synchronized void finishRoom(Long roomId, String inviteCode) {
-		savePendingTick(roomId, inviteCode);
-		recordTick(roomId, inviteCode, true);
+	public synchronized void finishRoom(Room room) {
+		savePendingTick(room);
+		recordTick(room, true);
+		tradeService.clearRoom(room.getInviteCode());
 	}
 
-	private void recordTick(Long roomId, String inviteCode, boolean skipEmpty) {
+	private void recordTick(Room room, boolean skipEmpty) {
+		Long roomId = room.getId();
 		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickedAtDesc(roomId);
-		TradeSnapshot snapshot = tradeService.drainWithParticipants(roomId);
+		// Trade messages use the invite code as their room key.
+		TradeSnapshot snapshot = tradeService.drainWithParticipants(room.getInviteCode());
 		TradeCount volume = snapshot.count();
 		if (skipEmpty && TradeCount.ZERO.equals(volume)) {
 			return;
@@ -89,10 +95,11 @@ public class MarketService {
 		);
 
 		pendingTicks.put(roomId, tick);
-		savePendingTick(roomId, inviteCode);
+		savePendingTick(room);
 	}
 
-	private boolean savePendingTick(Long roomId, String inviteCode) {
+	private boolean savePendingTick(Room room) {
+		Long roomId = room.getId();
 		PendingTick tick = pendingTicks.get(roomId);
 		if (tick == null) {
 			return false;
@@ -107,7 +114,7 @@ public class MarketService {
 		pendingTicks.remove(roomId);
 
 		try {
-			roomSessions.broadcast(inviteCode, MarketTickMessage.of(inviteCode, response));
+			roomSessions.broadcast(room.getInviteCode(), MarketTickMessage.of(room.getInviteCode(), response));
 		} catch (RuntimeException failure) {
 			log.warn("Could not broadcast market tick {} for room {}", response.tickId(), roomId, failure);
 		}

@@ -19,6 +19,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
+import dev.infreej.jeckathon.domain.room.service.RoomEndService;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
 import tools.jackson.databind.JsonNode;
 
@@ -29,6 +30,7 @@ class TradeWebSocketIntegrationTest {
 	@Value("${local.server.port}") int port;
 	@Autowired RoomRepository roomRepository;
 	@Autowired RoomService roomService;
+	@Autowired RoomEndService roomEndService;
 
 	@Test
 	void 방에_입장한_뒤에만_trade가_반영되고_시세로_이어진다() throws Exception {
@@ -61,7 +63,7 @@ class TradeWebSocketIntegrationTest {
 		assertThat(tick.get("buyCount").intValue()).isEqualTo(3);
 		assertThat(tick.get("indexValue").doubleValue()).as("매수만 있었으므로 지수가 오른다").isGreaterThan(100.0);
 		ws.close();
-		roomService.end(code);
+		roomEndService.end(code);
 	}
 
 	private static String trade(String code, int buy) {
