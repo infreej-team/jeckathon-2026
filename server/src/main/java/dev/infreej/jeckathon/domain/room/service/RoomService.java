@@ -7,6 +7,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import dev.infreej.jeckathon.domain.match.entity.Match;
+import dev.infreej.jeckathon.domain.match.service.MatchService;
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.entity.RoomStatus;
 import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
@@ -24,11 +26,14 @@ public class RoomService {
 	private static final int INVITE_CODE_LENGTH = 8;
 
 	private final RoomRepository roomRepository;
+	private final MatchService matchService;
 	private final SecureRandom random = new SecureRandom();
 
 	@Transactional
-	public Room create(String name) {
-		return roomRepository.save(new Room(generateInviteCode(), name));
+	public Room create(Long matchId, String name) {
+		Match match = matchService.getMatch(matchId);
+		String roomName = name == null || name.isBlank() ? match.getTeam1() + " vs " + match.getTeam2() : name.strip();
+		return roomRepository.save(new Room(generateInviteCode(), roomName, match));
 	}
 
 	// 다른 도메인이 방을 찾을 때도 이 메서드를 쓴다.
@@ -40,7 +45,7 @@ public class RoomService {
 	// 거래·코멘트처럼 경기 중에만 받는 요청에서 쓴다.
 	public Room getLiveByInviteCode(String inviteCode) {
 		Room room = getByInviteCode(inviteCode);
-		if (room.getStatus() != RoomStatus.LIVE) {
+		if (!room.isAcceptingTrades()) {
 			throw new BusinessException(ErrorCode.ROOM_NOT_LIVE);
 		}
 		return room;
@@ -48,12 +53,12 @@ public class RoomService {
 
 	// 1초 집계 대상인 방 목록
 	public List<Room> getLiveRooms() {
-		return roomRepository.findAllByStatus(RoomStatus.LIVE);
+		return roomRepository.findAllByStatusAndEndedAtIsNull(RoomStatus.LIVE);
 	}
 
 	@Transactional
 	public Room start(String inviteCode) {
-		Room room = getByInviteCode(inviteCode);
+		Room room = getByInviteCodeForUpdate(inviteCode);
 		if (room.getStatus() != RoomStatus.WAITING) {
 			throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "대기 중인 방만 시작할 수 있습니다.");
 		}
@@ -62,13 +67,29 @@ public class RoomService {
 	}
 
 	@Transactional
-	public Room end(String inviteCode) {
-		Room room = getByInviteCode(inviteCode);
-		if (room.getStatus() != RoomStatus.LIVE) {
+	public Room beginEnd(String inviteCode) {
+		Room room = getByInviteCodeForUpdate(inviteCode);
+		if (room.getStatus() == RoomStatus.WAITING) {
 			throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "진행 중인 방만 종료할 수 있습니다.");
 		}
-		room.end(Instant.now());
+		if (room.isAcceptingTrades()) {
+			room.beginEnd(Instant.now());
+		}
 		return room;
+	}
+
+	@Transactional
+	public Room completeEnd(String inviteCode, double changeRate, double volatility, Double replayScore) {
+		Room room = getByInviteCodeForUpdate(inviteCode);
+		if (room.getStatus() != RoomStatus.ENDED) {
+			room.completeEnd(changeRate, volatility, replayScore);
+		}
+		return room;
+	}
+
+	public Room getByInviteCodeForUpdate(String inviteCode) {
+		return roomRepository.findByInviteCodeForUpdate(inviteCode)
+			.orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 	}
 
 	private String generateInviteCode() {

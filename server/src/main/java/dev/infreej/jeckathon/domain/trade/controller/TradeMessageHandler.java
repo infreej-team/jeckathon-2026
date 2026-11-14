@@ -5,6 +5,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 import dev.infreej.jeckathon.domain.trade.service.TradeService;
+import dev.infreej.jeckathon.global.error.BusinessException;
 import dev.infreej.jeckathon.global.websocket.UserHandshakeInterceptor;
 import dev.infreej.jeckathon.global.websocket.WsMessageHandler;
 import dev.infreej.jeckathon.global.websocket.WsSender;
@@ -34,8 +35,12 @@ public class TradeMessageHandler implements WsMessageHandler {
 		}
 		String roomId = roomIdNode.asString();
 		TradeCount request = new TradeCount(countOf(payload, "buy"), countOf(payload, "sell"));
-		TradeCount applied = tradeService.applyTrade(roomId, UserHandshakeInterceptor.userIdOf(session), request);
-		sender.send(session, new TradeAck("trade.ack", roomId, applied.buy(), applied.sell()));
+		try {
+			TradeCount applied = tradeService.applyTrade(roomId, UserHandshakeInterceptor.userIdOf(session), request);
+			sender.send(session, new TradeAck("trade.ack", roomId, applied.buy(), applied.sell()));
+		} catch (BusinessException failure) {
+			sender.sendError(session, failure.getMessage());
+		}
 	}
 
 	// 정수가 아니거나(문자열, 소수, int 범위 밖) 없으면 0으로 본다.

@@ -48,6 +48,9 @@ public class MarketService {
 	synchronized void recordActiveRooms() {
 		for (Room room : roomService.getLiveRooms()) {
 			try {
+				if (!roomService.getByInviteCode(room.getInviteCode()).isAcceptingTrades()) {
+					continue;
+				}
 				if (!savePendingTick(room.getId())) {
 					recordTick(room, false);
 				}
@@ -61,6 +64,7 @@ public class MarketService {
 	public synchronized void finishRoom(Room room) {
 		savePendingTick(room.getId());
 		recordTick(room, true);
+		tradeService.clearRoom(room.getInviteCode());
 	}
 
 	private void recordTick(Room room, boolean skipEmpty) {
