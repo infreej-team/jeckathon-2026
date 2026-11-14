@@ -7,14 +7,14 @@ import org.springframework.stereotype.Service;
 
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
-// 방별 매수·매도 횟수를 1초 구간 단위로 모은다. 방 존재·참여자 확인은 방 도메인이 생기면 applyTrade에 다시 넣는다.
+// 방별 매수·매도 횟수를 1초 구간 단위로 모은다. 방 입장·진행 여부는 호출하는 쪽(TradeMessageHandler)이 확인한다.
 @Service
 public class TradeService {
 
-	private final ConcurrentMap<String, RoomBucket> buckets = new ConcurrentHashMap<>();
+	private final ConcurrentMap<Long, RoomBucket> buckets = new ConcurrentHashMap<>();
 
 	/** 한도를 적용해 실제로 반영한 횟수를 반환한다. 반영하지 않으면 {@link TradeCount#ZERO}. */
-	public TradeCount applyTrade(String roomId, String userId, TradeCount request) {
+	public TradeCount applyTrade(Long roomId, String userId, TradeCount request) {
 		if (request == null || roomId == null || userId == null) {
 			return TradeCount.ZERO;
 		}
@@ -32,12 +32,12 @@ public class TradeService {
 	}
 
 	/** 현재 집계 구간의 방 합계를 돌려주고 0으로 초기화한다. 거래가 없던 방은 {@link TradeCount#ZERO}. */
-	public TradeCount drain(String roomId) {
+	public TradeCount drain(Long roomId) {
 		RoomBucket bucket = roomId == null ? null : buckets.get(roomId);
 		return bucket == null ? TradeCount.ZERO : bucket.drain();
 	}
 
-	public void clearRoom(String roomId) {
+	public void clearRoom(Long roomId) {
 		if (roomId == null) {
 			return;
 		}

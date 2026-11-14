@@ -9,15 +9,18 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import dev.infreej.jeckathon.domain.market.dto.MarketTickMessage;
 import dev.infreej.jeckathon.domain.market.dto.MarketTickResponse;
 import dev.infreej.jeckathon.domain.market.entity.MarketTick;
 import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
 import dev.infreej.jeckathon.domain.market.service.MarketRoomSource.ActiveRoom;
 import dev.infreej.jeckathon.domain.market.service.MarketTradeSource.TradeVolume;
+import dev.infreej.jeckathon.domain.room.entity.Room;
+import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
+import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
 import dev.infreej.jeckathon.global.response.PageResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -31,9 +34,12 @@ public class MarketService {
 	private final MarketTickRepository repository;
 	private final ObjectProvider<MarketRoomSource> roomSources;
 	private final ObjectProvider<MarketTradeSource> tradeSources;
-	private final SimpMessagingTemplate messaging;
+	private final RoomRepository roomRepository;
+	private final RoomSessionRegistry roomSessions;
 
 	private final Map<Long, PendingTick> pendingTicks = new HashMap<>();
+	// 초대 코드는 바뀌지 않으므로 방마다 한 번만 조회한다.
+	private final Map<Long, String> inviteCodes = new HashMap<>();
 
 	public PageResponse<MarketTickResponse> getTicks(Long roomId, int page, int size) {
 		return PageResponse.from(
@@ -109,7 +115,9 @@ public class MarketService {
 		pendingTicks.remove(roomId);
 
 		try {
-			messaging.convertAndSend("/topic/rooms/" + roomId + "/market", response);
+			String inviteCode = inviteCodes.computeIfAbsent(roomId,
+				id -> roomRepository.findById(id).map(Room::getInviteCode).orElseThrow());
+			roomSessions.broadcast(inviteCode, MarketTickMessage.of(inviteCode, response));
 		} catch (RuntimeException failure) {
 			log.warn("Could not broadcast market tick {} for room {}", response.tickId(), roomId, failure);
 		}

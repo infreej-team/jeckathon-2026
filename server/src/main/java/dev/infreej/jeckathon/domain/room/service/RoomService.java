@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class RoomService {
 	private static final int INVITE_CODE_LENGTH = 8;
 
 	private final RoomRepository roomRepository;
+	private final ApplicationEventPublisher events;
 	private final SecureRandom random = new SecureRandom();
 
 	@Transactional
@@ -68,6 +70,7 @@ public class RoomService {
 			throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "진행 중인 방만 종료할 수 있습니다.");
 		}
 		room.end(Instant.now());
+		events.publishEvent(new RoomEndedEvent(room.getId(), room.getInviteCode()));
 		return room;
 	}
 
