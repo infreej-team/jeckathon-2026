@@ -124,7 +124,7 @@ export function TeamSelect() {
     null;
 
   const title = sides.length === 2 ? `${sides[0].view.name} vs ${sides[1].view.name}` : entry.name;
-  // 임시 경로: 차트 화면이 아직 없다. 고른 팀은 쿼리로 넘긴다.
+  // 고른 팀은 쿼리로 넘긴다.
   const enterHref = selected
     ? `/rooms/${selected.room.inviteCode}/live${side ? `?team=${encodeURIComponent(side.team)}` : ""}`
     : null;
