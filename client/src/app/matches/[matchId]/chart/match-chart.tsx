@@ -147,7 +147,7 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link href={path}>‹ 경기방</Link>
-        <strong>팬닥</strong>
+        <strong>개경장</strong>
         <button onClick={async () => {
           try {
             await navigator.clipboard.writeText(location.href);
