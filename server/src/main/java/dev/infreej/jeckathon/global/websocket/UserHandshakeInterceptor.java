@@ -17,6 +17,7 @@ import org.springframework.web.util.UriUtils;
 public class UserHandshakeInterceptor implements HandshakeInterceptor {
 
 	static final String USER_ID = "userId";
+	private static final int MAX_USER_ID_LENGTH = 36;
 
 	public static String userIdOf(WebSocketSession session) {
 		return (String) session.getAttributes().get(USER_ID);
@@ -29,7 +30,9 @@ public class UserHandshakeInterceptor implements HandshakeInterceptor {
 		if (userId != null) {
 			userId = UriUtils.decode(userId, StandardCharsets.UTF_8).strip();
 		}
-		attributes.put(USER_ID, userId == null || userId.isEmpty() ? UUID.randomUUID().toString() : userId);
+		// REST의 X-User-Id와 같은 규칙(36자 이하)을 지켜야 거래 기록에 저장할 수 있다.
+		boolean valid = userId != null && !userId.isEmpty() && userId.length() <= MAX_USER_ID_LENGTH;
+		attributes.put(USER_ID, valid ? userId : UUID.randomUUID().toString());
 		return true;
 	}
 
