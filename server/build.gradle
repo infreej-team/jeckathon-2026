@@ -25,7 +25,10 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
+tasks.named('test') { useJUnitPlatform(); testLogging { events 'passed', 'failed'; exceptionFormat 'full' } }
 
 // 실행 가능한 jar만 만든다. Dockerfile이 build/libs의 jar 하나를 복사한다.
 tasks.named('jar') {
