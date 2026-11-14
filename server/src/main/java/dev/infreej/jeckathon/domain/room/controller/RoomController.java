@@ -11,17 +11,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dev.infreej.jeckathon.domain.room.dto.RoomCreateRequest;
 import dev.infreej.jeckathon.domain.room.dto.RoomResponse;
+import dev.infreej.jeckathon.domain.room.dto.RoomStatusMessage;
+import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
+import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 // 방 생성·시작·종료는 권한 검사 없이 열어 둔다.
+// 상태 변경 알림은 서비스 트랜잭션이 커밋된 뒤에 보내려고 여기서 보낸다.
 @RestController
 @RequestMapping("/api/rooms")
 @RequiredArgsConstructor
 public class RoomController {
 
 	private final RoomService roomService;
+	private final RoomSessionRegistry roomSessionRegistry;
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
@@ -36,11 +41,15 @@ public class RoomController {
 
 	@PostMapping("/{inviteCode}/start")
 	public RoomResponse start(@PathVariable String inviteCode) {
-		return RoomResponse.from(roomService.start(inviteCode));
+		Room room = roomService.start(inviteCode);
+		roomSessionRegistry.broadcast(room.getInviteCode(), RoomStatusMessage.from(room));
+		return RoomResponse.from(room);
 	}
 
 	@PostMapping("/{inviteCode}/end")
 	public RoomResponse end(@PathVariable String inviteCode) {
-		return RoomResponse.from(roomService.end(inviteCode));
+		Room room = roomService.end(inviteCode);
+		roomSessionRegistry.broadcast(room.getInviteCode(), RoomStatusMessage.from(room));
+		return RoomResponse.from(room);
 	}
 }
