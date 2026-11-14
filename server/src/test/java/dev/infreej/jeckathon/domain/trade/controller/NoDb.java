@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.domain.trade.ws;
+package dev.infreej.jeckathon.domain.trade.controller;
 
 public final class NoDb {
 	public static final String EXCLUDE = "spring.autoconfigure.exclude="
