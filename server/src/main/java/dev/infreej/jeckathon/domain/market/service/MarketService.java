@@ -33,11 +33,11 @@ public class MarketService {
 	private final ObjectProvider<MarketTradeSource> tradeSources;
 	private final SimpMessagingTemplate messaging;
 
-	private final Map<Long, MarketTickResponse> pendingTicks = new HashMap<>();
+	private final Map<Long, PendingTick> pendingTicks = new HashMap<>();
 
 	public PageResponse<MarketTickResponse> getTicks(Long roomId, int page, int size) {
 		return PageResponse.from(
-			repository.findByRoomIdOrderByTickIdDesc(roomId, PageRequest.of(page, size)),
+			repository.findByRoomIdOrderByTickedAtDesc(roomId, PageRequest.of(page, size)),
 			MarketTickResponse::from
 		);
 	}
@@ -69,20 +69,25 @@ public class MarketService {
 	}
 
 	private void recordTick(Long roomId, int participantCount, MarketTradeSource trades, boolean skipEmpty) {
-		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickIdDesc(roomId);
+		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickedAtDesc(roomId);
 		TradeVolume volume = trades.drain(roomId);
 		if (skipEmpty && volume.isEmpty()) {
 			return;
 		}
 
-		long nextTickId = previous.map(MarketTick::getTickId).orElse(0L) + 1;
-		BigDecimal previousValue = previous.map(MarketTick::getIndexValue).orElse(MarketIndex.INITIAL_VALUE);
-		MarketTickResponse tick = new MarketTickResponse(
-			nextTickId,
-			Instant.now().truncatedTo(ChronoUnit.MILLIS),
-			MarketIndex.calculate(previousValue, volume, participantCount),
-			volume.buyCount(),
-			volume.sellCount()
+		Instant tickedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+		Instant previousTime = previous.map(MarketTick::getTickedAt).orElse(Instant.MIN);
+		if (!tickedAt.isAfter(previousTime)) {
+			tickedAt = previousTime.plusMillis(1).truncatedTo(ChronoUnit.MILLIS);
+		}
+		BigDecimal previousValue = previous.map(tick -> BigDecimal.valueOf(tick.getIndexValue()))
+			.orElse(MarketIndex.INITIAL_VALUE);
+		PendingTick tick = new PendingTick(
+			tickedAt,
+			MarketIndex.calculate(previousValue, volume, participantCount).doubleValue(),
+			Math.toIntExact(volume.buyCount()),
+			Math.toIntExact(volume.sellCount()),
+			participantCount
 		);
 
 		pendingTicks.put(roomId, tick);
@@ -90,22 +95,28 @@ public class MarketService {
 	}
 
 	private boolean savePendingTick(Long roomId) {
-		MarketTickResponse tick = pendingTicks.get(roomId);
+		PendingTick tick = pendingTicks.get(roomId);
 		if (tick == null) {
 			return false;
 		}
 
 		repository.insertTick(
-			roomId, tick.tickId(), tick.recordedAt(), tick.indexValue(), tick.buyCount(), tick.sellCount()
+			roomId, tick.tickedAt(), tick.indexValue(), tick.buyCount(), tick.sellCount(), tick.participantCount()
 		);
+		MarketTickResponse response = repository.findByRoomIdAndTickedAt(roomId, tick.tickedAt())
+			.map(MarketTickResponse::from)
+			.orElseThrow();
 		pendingTicks.remove(roomId);
 
 		try {
-			messaging.convertAndSend("/topic/rooms/" + roomId + "/market", tick);
+			messaging.convertAndSend("/topic/rooms/" + roomId + "/market", response);
 		} catch (RuntimeException failure) {
-			log.warn("Could not broadcast market tick {} for room {}", tick.tickId(), roomId, failure);
+			log.warn("Could not broadcast market tick {} for room {}", response.tickId(), roomId, failure);
 		}
 
 		return true;
+	}
+
+	private record PendingTick(Instant tickedAt, double indexValue, int buyCount, int sellCount, int participantCount) {
 	}
 }

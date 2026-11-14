@@ -1,6 +1,5 @@
 package dev.infreej.jeckathon.domain.market.repository;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -17,23 +16,25 @@ import dev.infreej.jeckathon.domain.market.entity.MarketTick;
 
 public interface MarketTickRepository extends JpaRepository<MarketTick, Long> {
 
-	Optional<MarketTick> findFirstByRoomIdOrderByTickIdDesc(Long roomId);
+	Optional<MarketTick> findFirstByRoomIdOrderByTickedAtDesc(Long roomId);
 
-	Page<MarketTick> findByRoomIdOrderByTickIdDesc(Long roomId, Pageable pageable);
+	Page<MarketTick> findByRoomIdOrderByTickedAtDesc(Long roomId, Pageable pageable);
+
+	Optional<MarketTick> findByRoomIdAndTickedAt(Long roomId, Instant tickedAt);
 
 	@Modifying
 	@Transactional(propagation = Propagation.REQUIRES_NEW)
 	@Query(value = """
-		INSERT INTO market_tick (room_id, tick_id, recorded_at, index_value, buy_count, sell_count)
-		VALUES (:roomId, :tickId, :recordedAt, :indexValue, :buyCount, :sellCount)
-		ON CONFLICT (room_id, tick_id) DO NOTHING
+		INSERT INTO market_tick (room_id, ticked_at, index_value, buy_count, sell_count, participant_count)
+		VALUES (:roomId, :tickedAt, :indexValue, :buyCount, :sellCount, :participantCount)
+		ON CONFLICT (room_id, ticked_at) DO NOTHING
 		""", nativeQuery = true)
 	void insertTick(
 		@Param("roomId") Long roomId,
-		@Param("tickId") long tickId,
-		@Param("recordedAt") Instant recordedAt,
-		@Param("indexValue") BigDecimal indexValue,
-		@Param("buyCount") long buyCount,
-		@Param("sellCount") long sellCount
+		@Param("tickedAt") Instant tickedAt,
+		@Param("indexValue") double indexValue,
+		@Param("buyCount") int buyCount,
+		@Param("sellCount") int sellCount,
+		@Param("participantCount") int participantCount
 	);
 }

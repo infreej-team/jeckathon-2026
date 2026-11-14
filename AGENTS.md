@@ -18,6 +18,7 @@
   - `domain/<도메인>/`: 기능 코드를 도메인별로 둔다. 도메인 안에서 `controller`, `service`, `repository`, `entity`, `dto`로 나눈다.
   - `global/`: 여러 도메인이 쓰는 코드다. `error/`(오류 코드·예외·전역 예외 처리), `response/`(목록 응답 `PageResponse`), `health/`(`GET /api/health`).
 - 의도한 실패는 `ErrorCode`에 코드를 추가하고 `BusinessException`을 던진다. 실패 응답 형식은 `GlobalExceptionHandler`가 맞춘다.
+- 운영 이미지 계약: client는 3000 포트에서 `/api`를 제외한 모든 경로를 처리한다. server는 8080 포트에서 `/api/*`를 처리하고 `GET /api/health`에 `200`으로 응답한다. 배포 후 상태 확인이 이 경로를 쓴다.
 - server의 모든 API 경로는 `/api`로 시작한다. client에서는 `/api` 경로에 Route Handler를 만들지 않는다. 운영에서 nginx가 `/api`를 server로 보내므로 client에 닿지 않는다.
 - JPA `ddl-auto`는 기본 `update`다. 컬럼 삭제나 이름 변경은 반영되지 않으므로 필요하면 DB에서 직접 바꾼다.
 
@@ -26,18 +27,6 @@
 1. 루트에서 `docker compose up -d`로 PostgreSQL을 띄운다. 접속 정보는 `localhost:5432`, DB·사용자 `jeckathon`, 비밀번호 `1234`다.
 2. `server/`에서 `./gradlew bootRun`으로 8080 포트에 server를 띄운다.
 3. `client/`에서 `npm install` 후 `npm run dev`로 3000 포트에 client를 띄운다. 개발 서버는 `/api` 요청을 `http://localhost:8080`으로 넘긴다.
-
-## 임시 이미지를 실제 이미지로 교체
-
-- 현재 client와 server는 소스가 없어 임시 이미지(`traefik/whoami`)로 실행된다. `compose.prod.yaml`의 `WHOAMI_*` 환경 변수는 이 임시 이미지 전용 설정이다.
-- 실제 이미지는 다음 계약을 지킨다. client는 3000 포트에서 `/api`를 제외한 모든 경로를 처리한다. server는 8080 포트에서 `/api/*`를 처리하고 `GET /api/health`에 `200`으로 응답한다.
-- client와 server는 준비되는 대로 서비스별로 따로 교체한다. 아래 순서에서 이미지 변수와 `WHOAMI_*`는 교체하는 서비스의 것만 다룬다.
-  1. 해당 서비스의 소스와 `Dockerfile`을 `main`에 병합하고, Actions가 GHCR에 `latest` 태그를 붙였는지 확인한다.
-  2. 서버의 `.env.prod`에서 해당 서비스의 이미지 변수(`CLIENT_IMAGE` 또는 `SERVER_IMAGE`) 주석을 해제한다. 실제 이미지는 `WHOAMI_*` 환경 변수를 무시하므로, 이후 어떤 병합으로 자동 배포가 돌아도 실제 이미지로 전환된다. 바로 전환하려면 서버에서 `pull`과 `up -d`를 실행한다.
-  3. 후속 PR에서 `compose.prod.yaml`의 해당 서비스 `WHOAMI_*` 환경 변수를 삭제하고 병합한다.
-  4. 외부에서 `/`와 `/api/health` 응답을 확인한다.
-- 2번 없이 3번을 병합하면 whoami가 기본 포트(80)로 떠서 nginx가 `502`를 반환한다. 2번을 먼저 끝낸다.
-- 아직 GHCR에 없는 이미지의 변수를 해제하면 이후 모든 자동 배포가 pull 단계에서 멈춘다. 실행 중인 서비스는 유지된다. 1번의 빌드가 성공한 뒤에 2번을 한다.
 
 ## Git 브랜치 전략
 
