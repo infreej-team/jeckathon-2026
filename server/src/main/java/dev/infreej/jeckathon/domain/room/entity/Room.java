@@ -58,4 +58,14 @@ public class Room {
 		this.name = name;
 		this.status = RoomStatus.WAITING;
 	}
+
+	public void start(Instant startedAt) {
+		this.status = RoomStatus.LIVE;
+		this.startedAt = startedAt;
+	}
+
+	public void end(Instant endedAt) {
+		this.status = RoomStatus.ENDED;
+		this.endedAt = endedAt;
+	}
 }
