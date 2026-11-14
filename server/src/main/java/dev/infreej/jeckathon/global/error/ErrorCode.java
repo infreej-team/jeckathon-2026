@@ -18,7 +18,13 @@ public enum ErrorCode {
 
 	ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "방을 찾을 수 없습니다."),
 	ROOM_NOT_LIVE(HttpStatus.CONFLICT, "진행 중인 방이 아닙니다."),
-	ROOM_INVALID_STATUS(HttpStatus.CONFLICT, "방 상태를 바꿀 수 없습니다.");
+	ROOM_INVALID_STATUS(HttpStatus.CONFLICT, "방 상태를 바꿀 수 없습니다."),
+	ROOM_NOT_STARTED(HttpStatus.CONFLICT, "아직 시작하지 않은 방입니다."),
+
+	INVALID_USER_ID(HttpStatus.BAD_REQUEST, "X-User-Id 헤더가 없거나 올바르지 않습니다."),
+	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "코멘트를 찾을 수 없습니다."),
+	COMMENT_LIKE_NOT_FOUND(HttpStatus.NOT_FOUND, "좋아요를 누르지 않은 코멘트입니다."),
+	ALREADY_LIKED(HttpStatus.CONFLICT, "이미 좋아요를 누른 코멘트입니다.");
 
 	private final HttpStatus status;
 	private final String message;
