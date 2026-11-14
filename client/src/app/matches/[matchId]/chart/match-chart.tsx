@@ -15,7 +15,7 @@ async function get<T>(url: string, signal: AbortSignal): Promise<T> {
   return response.json();
 }
 
-function Trend({ ticks }: { ticks: Tick[] }) {
+function Trend({ ticks, live }: { ticks: Tick[]; live: boolean }) {
   const values = ticks.map((tick) => tick.indexValue);
   const min = Math.min(...values) - 0.1;
   const max = Math.max(...values) + 0.1;
@@ -24,17 +24,28 @@ function Trend({ ticks }: { ticks: Tick[] }) {
     y: 110 - 96 * (tick.indexValue - min) / (max - min),
   }));
   const last = points.at(-1);
+  const maxVolume = Math.max(1, ...ticks.map((tick) => tick.buyCount + tick.sellCount));
+  const barWidth = Math.min(6, 180 / ticks.length);
+  const formatTime = new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 
   return (
-    <svg className={styles.chart} viewBox="0 0 344 125" role="img" aria-label="시간순 팬심 지수">
+    <svg className={styles.chart} viewBox="0 0 344 160" role="img" aria-label="시간순 팬심 지수">
       {[14, 62, 110].map((y, i) => (
         <g key={y}>
           <line x1="36" x2="331" y1={y} y2={y} />
           <text x="0" y={y + 3}>{(max - i * (max - min) / 2).toFixed(1)}</text>
         </g>
       ))}
+      {live && last && <line className={styles.liveCursor} x1={last.x} x2={last.x} y1="14" y2="110" />}
       <polyline points={points.map(({ x, y }) => x + ',' + y).join(' ')} />
       {last && <circle cx={last.x} cy={last.y} r="4" />}
+      {ticks.map((tick, i) => {
+        const height = 19 * (tick.buyCount + tick.sellCount) / maxVolume;
+        return <rect key={tick.tickId} x={points[i].x - barWidth / 2} y={136 - height}
+          width={barWidth} height={height} fill={tick.buyCount >= tick.sellCount ? "#e01f35" : "#2b59f0"} />;
+      })}
+      <text x="36" y="153">{formatTime.format(new Date(ticks[0].recordedAt))}</text>
+      {ticks.length > 1 && <text x="331" y="153" textAnchor="end">{formatTime.format(new Date(ticks[ticks.length - 1].recordedAt))}</text>}
     </svg>
   );
 }
@@ -149,7 +160,7 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
       <section className={[styles.card, styles.roomCard].join(" ")}>
         <h1>{room?.name ?? '팬심 차트'}</h1>
         <div className={styles.meta}>
-          <span>{status ? statusText[status] : loadError ? '조회 실패' : '경기 정보 조회 중'}</span>
+          <span className={status === "LIVE" ? styles.liveBadge : undefined}>{status ? statusText[status] : loadError ? '조회 실패' : '경기 정보 조회 중'}</span>
           {participants !== null && <span>참여 {participants}명</span>}
         </div>
       </section>
@@ -159,7 +170,7 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
         {latest ? <>
           <p className={styles.value}>{latest.indexValue.toFixed(2)}</p>
           <p className={styles.meta}>최근 집계 매수 {latest.buyCount}, 매도 {latest.sellCount}</p>
-          <Trend ticks={ticks} />
+          <Trend ticks={ticks} live={status === "LIVE"} />
         </> : <p>아직 표시할 시세가 없어요.</p>}
       </section>
       <section className={[styles.card, styles.tradeCard].join(" ")}>

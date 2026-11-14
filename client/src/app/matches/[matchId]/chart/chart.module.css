@@ -24,19 +24,23 @@
 .actions button:disabled { opacity: .45; }
 .error { color: #a51529; margin-bottom: 10px; }
 
+.liveBadge { color: #a51529; font-weight: 800; }
+.chart .liveCursor { stroke: #111; stroke-dasharray: none; }
+
 @media (orientation: landscape) and (min-width: 600px), (min-width: 960px) {
   .page {
     display: grid;
     width: min(100%, 1120px);
-    grid-template-columns: minmax(0, 2fr) minmax(225px, 1fr);
-    grid-template-rows: auto auto auto 1fr;
-    align-items: start;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: max-content;
+    gap: 8px;
+    padding-block: 10px;
   }
 
-  .header, .error { grid-column: 1 / -1; margin-bottom: 0; }
-  .roomCard { grid-column: 2; grid-row: 3; }
-  .chartCard { grid-column: 1; grid-row: 3 / 5; }
-  .tradeCard { grid-column: 2; grid-row: 4; }
-  .card { min-width: 0; margin-bottom: 0; }
+  .header, .error, .card { margin-bottom: 0; }
+  .card { min-width: 0; padding: 8px 12px; }
+  .chartCard { border: 0; background: transparent; box-shadow: none; }
+  .chart { display: block; height: clamp(130px, 53dvh, 420px); margin-top: 4px; }
+  .tradeCard { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+  .tradeCard .actions { flex: 1; margin-block: 0; }
 }
