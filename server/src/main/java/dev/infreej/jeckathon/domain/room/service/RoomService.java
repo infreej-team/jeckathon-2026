@@ -4,6 +4,8 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,10 +32,29 @@ public class RoomService {
 	private final SecureRandom random = new SecureRandom();
 
 	@Transactional
-	public Room create(Long matchId, String name) {
+	public Room create(Long matchId, String name, String team, Integer capacity) {
 		Match match = matchService.getMatch(matchId);
+		String roomTeam = team == null || team.isBlank() ? null : team.strip();
+		if (roomTeam != null && !roomTeam.equals(match.getTeam1()) && !roomTeam.equals(match.getTeam2())) {
+			throw new BusinessException(ErrorCode.INVALID_REQUEST, "team은 경기의 두 팀 중 하나여야 합니다.");
+		}
 		String roomName = name == null || name.isBlank() ? match.getTeam1() + " vs " + match.getTeam2() : name.strip();
-		return roomRepository.save(new Room(generateInviteCode(), roomName, match));
+		return roomRepository.save(new Room(generateInviteCode(), roomName, match, roomTeam, capacity));
+	}
+
+	// 응원 팀 고르기 화면용. 같은 경기의 방을 만든 순서로 준다.
+	public List<Room> getRoomsOfMatch(Long matchId) {
+		matchService.getMatch(matchId);
+		return roomRepository.findAllByMatchIdOrderByCreatedAtAscIdAsc(matchId);
+	}
+
+	// 로비 목록. status가 없으면 진행 중, 대기, 종료 순으로 전체를 준다.
+	public Page<Room> getRooms(RoomStatus status, int page, int size) {
+		PageRequest pageable = PageRequest.of(page, size);
+		if (status == null) {
+			return roomRepository.findAllForLobby(pageable);
+		}
+		return roomRepository.findAllByStatusOrderByCreatedAtDesc(status, pageable);
 	}
 
 	// 다른 도메인이 방을 찾을 때도 이 메서드를 쓴다.

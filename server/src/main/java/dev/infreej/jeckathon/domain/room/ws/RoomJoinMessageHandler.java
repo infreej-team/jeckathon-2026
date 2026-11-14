@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.JsonNode;
 
 // { "type": "room.join", "roomId": "<inviteCode>" } → { "type": "room.joined", "roomId", "name", "status", "participantCount" }
-// 방 상태와 무관하게 입장할 수 있다. 참여자 수가 바뀌면 방 전체에 room.participants를 보낸다.
+// 방 상태와 무관하게 입장할 수 있지만 정원이 찬 방에는 들어갈 수 없다. 참여자 수가 바뀌면 방 전체에 room.participants를 보낸다.
 @Component
 @RequiredArgsConstructor
 public class RoomJoinMessageHandler implements WsMessageHandler {
@@ -43,6 +43,11 @@ public class RoomJoinMessageHandler implements WsMessageHandler {
 			return;
 		}
 		String inviteCode = room.getInviteCode();
+		// 정원 검사와 입장 사이에 다른 세션이 들어오면 정원을 조금 넘을 수 있다.
+		if (!registry.isJoined(session, inviteCode) && registry.participantCount(inviteCode) >= room.getCapacity()) {
+			sender.sendError(session, "정원이 찬 방입니다.");
+			return;
+		}
 		boolean changed = registry.join(session, inviteCode);
 		sender.send(session, new RoomJoined("room.joined", inviteCode, room.getName(), room.getStatus(),
 				registry.participantCount(inviteCode)));

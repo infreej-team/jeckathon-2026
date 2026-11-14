@@ -26,6 +26,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Room {
 
+	public static final int DEFAULT_CAPACITY = 2000;
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
@@ -42,6 +44,13 @@ public class Room {
 	@ManyToOne
 	@JoinColumn(name = "match_id")
 	private Match match;
+
+	// 이 방에 모이는 응원 팀. 경기의 team1 또는 team2 값이다. null이면 두 팀 팬이 함께 쓰는 방이다.
+	@Column(length = 50)
+	private String team;
+
+	// 정원. 이 컬럼이 생기기 전에 만든 방은 null이고 기본 정원을 쓴다.
+	private Integer capacity;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 10)
@@ -62,11 +71,17 @@ public class Room {
 	@Column(nullable = false, updatable = false)
 	private Instant createdAt;
 
-	public Room(String inviteCode, String name, Match match) {
+	public Room(String inviteCode, String name, Match match, String team, Integer capacity) {
 		this.inviteCode = inviteCode;
 		this.name = name;
 		this.match = match;
+		this.team = team;
+		this.capacity = capacity;
 		this.status = RoomStatus.WAITING;
+	}
+
+	public int getCapacity() {
+		return capacity == null ? DEFAULT_CAPACITY : capacity;
 	}
 
 	public void start(Instant startedAt) {
