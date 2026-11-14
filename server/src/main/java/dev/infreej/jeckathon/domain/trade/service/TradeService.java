@@ -1,9 +1,11 @@
-package dev.infreej.jeckathon.domain.trade;
+package dev.infreej.jeckathon.domain.trade.service;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.springframework.stereotype.Service;
+
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 
 // 방별 매수·매도 횟수를 1초 구간 단위로 모은다. 방 존재·참여자 확인은 방 도메인이 생기면 applyTrade에 다시 넣는다.
 @Service

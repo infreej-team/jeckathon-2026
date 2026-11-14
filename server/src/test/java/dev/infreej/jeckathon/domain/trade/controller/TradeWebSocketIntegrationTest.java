@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.domain.trade.ws;
+package dev.infreej.jeckathon.domain.trade.controller;
 
 import static dev.infreej.jeckathon.global.websocket.FakeSessions.json;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,8 +20,8 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
 import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
-import dev.infreej.jeckathon.domain.trade.TradeCount;
-import dev.infreej.jeckathon.domain.trade.TradeService;
+import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
+import dev.infreej.jeckathon.domain.trade.service.TradeService;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = NoDb.EXCLUDE)
 class TradeWebSocketIntegrationTest {
