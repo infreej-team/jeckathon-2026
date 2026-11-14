@@ -40,6 +40,8 @@ services:
       DB_NAME: ${DB_NAME:-jeckathon}
       DB_USER: ${DB_USER:-jeckathon}
       DB_PASSWORD: "${DB_PASSWORD}"
+      # .env.prod에 없으면 운영 도메인만 허용한다.
+      WS_ALLOWED_ORIGINS: "${WS_ALLOWED_ORIGINS:-https://jeckathon.infreej.dev}"
     depends_on:
       db:
         condition: service_healthy

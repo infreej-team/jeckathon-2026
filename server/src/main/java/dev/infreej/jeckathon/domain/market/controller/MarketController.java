@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import dev.infreej.jeckathon.domain.market.dto.MarketTickResponse;
 import dev.infreej.jeckathon.domain.market.service.MarketService;
+import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.global.error.BusinessException;
 import dev.infreej.jeckathon.global.error.ErrorCode;
 import dev.infreej.jeckathon.global.response.PageResponse;
@@ -15,22 +16,23 @@ import dev.infreej.jeckathon.global.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/rooms/{roomId}/market/ticks")
+@RequestMapping("/api/rooms/{inviteCode}/market/ticks")
 @RequiredArgsConstructor
 public class MarketController {
 
 	private final MarketService marketService;
+	private final RoomService roomService;
 
 	@GetMapping
 	public PageResponse<MarketTickResponse> getTicks(
-		@PathVariable("roomId") Long roomId,
+		@PathVariable("inviteCode") String inviteCode,
 		@RequestParam(name = "page", defaultValue = "0") int page,
 		@RequestParam(name = "size", defaultValue = "120") int size
 	) {
-		if (roomId <= 0 || page < 0 || size < 1 || size > 600) {
+		if (page < 0 || size < 1 || size > 600) {
 			throw new BusinessException(ErrorCode.INVALID_REQUEST);
 		}
 
-		return marketService.getTicks(roomId, page, size);
+		return marketService.getTicks(roomService.getByInviteCode(inviteCode).getId(), page, size);
 	}
 }

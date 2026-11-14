@@ -2,55 +2,92 @@ package dev.infreej.jeckathon.domain.trade.controller;
 
 import static dev.infreej.jeckathon.global.websocket.FakeSessions.json;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
+import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
-import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
-import dev.infreej.jeckathon.domain.trade.service.TradeService;
+import dev.infreej.jeckathon.domain.room.service.RoomEndService;
+import dev.infreej.jeckathon.domain.room.service.RoomService;
+import tools.jackson.databind.JsonNode;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = NoDb.EXCLUDE)
+// 실제 DB(로컬은 compose.yaml, CI는 postgres 서비스)에 붙여 전체 빈을 연결한 상태로 띄운다.
+// 방 입장 → 거래 → 1초 시세 집계 → 웹소켓 브로드캐스트까지 한 번에 확인한다.
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TradeWebSocketIntegrationTest {
 	@Value("${local.server.port}") int port;
-	@MockitoBean TradeService tradeService;
-	// DB 자동 설정을 뺐으므로 저장소 빈은 목으로 채운다.
-	@MockitoBean RoomRepository roomRepository;
-	@MockitoBean MarketTickRepository marketTickRepository;
+	@Autowired RoomRepository roomRepository;
+	@Autowired RoomService roomService;
+	@Autowired RoomEndService roomEndService;
 
 	@Test
-	void 접속해서_trade를_보내면_ack를_받는다() throws Exception {
-		when(tradeService.applyTrade("room-1", "u1", new TradeCount(5, 0))).thenReturn(new TradeCount(3, 0));
+	void 방에_입장한_뒤에만_trade가_반영되고_시세로_이어진다() throws Exception {
+		String code = UUID.randomUUID().toString().substring(0, 8);
+		roomRepository.save(new Room(code, "통합 테스트", null));
+		roomService.start(code);
 		BlockingQueue<String> inbox = new LinkedBlockingQueue<>();
 		WebSocketSession ws = new StandardWebSocketClient().execute(new TextWebSocketHandler() {
 			protected void handleTextMessage(WebSocketSession s, TextMessage m) { inbox.add(m.getPayload()); }
 		}, "ws://localhost:" + port + "/api/ws?userId=u1").get(5, TimeUnit.SECONDS);
 
-		ws.sendMessage(new TextMessage("{\"type\":\"trade\",\"roomId\":\"room-1\",\"buy\":5,\"sell\":0}"));
-		String ack = inbox.poll(5, TimeUnit.SECONDS);
+		ws.sendMessage(new TextMessage(trade(code, 5)));
+		JsonNode beforeJoin = next(inbox, "trade.ack");
+		ws.sendMessage(new TextMessage("{\"type\":\"room.join\",\"roomId\":\"" + code + "\"}"));
+		next(inbox, "room.joined");
+		JsonNode participants = next(inbox, "room.participants");
+		ws.sendMessage(new TextMessage(trade(code, 5)));
+		JsonNode ack = next(inbox, "trade.ack");
 		ws.sendMessage(new TextMessage("garbage"));
-		String error = inbox.poll(5, TimeUnit.SECONDS);
-		ws.sendMessage(new TextMessage("{\"type\":\"trade\",\"roomId\":\"room-1\",\"buy\":5,\"sell\":0}"));
-		String second = inbox.poll(5, TimeUnit.SECONDS);
+		next(inbox, "error");
+		ws.sendMessage(new TextMessage(trade(code, 1)));
+		JsonNode second = next(inbox, "trade.ack");
+		JsonNode tick = nextTickWithBuy(inbox);
 
-		assertThat(json(ack)).isEqualTo(json("{\"type\":\"trade.ack\",\"roomId\":\"room-1\",\"buy\":3,\"sell\":0}"));
-		assertThat(json(error).get("type").asString()).isEqualTo("error");
-		assertThat(second).as("error 후에도 연결이 유지된다").isNotNull();
-		assertThat(ws.isOpen()).isTrue();
-		verify(tradeService, org.mockito.Mockito.times(2)).applyTrade("room-1", "u1", new TradeCount(5, 0));
+		assertThat(beforeJoin.get("buy").intValue()).as("입장 전 거래는 반영하지 않는다").isZero();
+		assertThat(participants.get("participantCount").intValue()).isEqualTo(1);
+		assertThat(ack.get("buy").intValue()).as("구간 한도 3까지만 반영한다").isEqualTo(3);
+		assertThat(second.get("buy").intValue()).as("error 후에도 연결이 유지되고, 한도를 다 써서 0이 반영된다").isZero();
+		assertThat(tick.get("roomId").asString()).isEqualTo(code);
+		assertThat(tick.get("buyCount").intValue()).isEqualTo(3);
+		assertThat(tick.get("indexValue").doubleValue()).as("매수만 있었으므로 지수가 오른다").isGreaterThan(100.0);
 		ws.close();
+		roomEndService.end(code);
+	}
+
+	private static String trade(String code, int buy) {
+		return "{\"type\":\"trade\",\"roomId\":\"" + code + "\",\"buy\":" + buy + ",\"sell\":0}";
+	}
+
+	// 1초마다 오는 market.tick이 응답 사이에 끼어들 수 있으므로 type으로 골라 받는다.
+	private static JsonNode next(BlockingQueue<String> inbox, String type) throws InterruptedException {
+		while (true) {
+			String payload = inbox.poll(5, TimeUnit.SECONDS);
+			assertThat(payload).as(type + " 메시지를 기다린다").isNotNull();
+			JsonNode node = json(payload);
+			if (type.equals(node.get("type").asString())) {
+				return node;
+			}
+		}
+	}
+
+	private static JsonNode nextTickWithBuy(BlockingQueue<String> inbox) throws InterruptedException {
+		while (true) {
+			JsonNode tick = next(inbox, "market.tick");
+			if (tick.get("buyCount").intValue() > 0) {
+				return tick;
+			}
+		}
 	}
 }

@@ -15,6 +15,7 @@ import dev.infreej.jeckathon.domain.room.dto.RoomResponse;
 import dev.infreej.jeckathon.domain.room.dto.RoomStatusMessage;
 import dev.infreej.jeckathon.domain.room.entity.Room;
 import dev.infreej.jeckathon.domain.room.entity.RoomStatus;
+import dev.infreej.jeckathon.domain.room.service.RoomEndService;
 import dev.infreej.jeckathon.domain.room.service.RoomService;
 import dev.infreej.jeckathon.domain.room.service.RoomSessionRegistry;
 import dev.infreej.jeckathon.global.error.BusinessException;
@@ -33,6 +34,7 @@ public class RoomController {
 	private static final int MAX_PAGE_SIZE = 100;
 
 	private final RoomService roomService;
+	private final RoomEndService roomEndService;
 	private final RoomSessionRegistry roomSessionRegistry;
 
 	@PostMapping
@@ -65,7 +67,7 @@ public class RoomController {
 
 	@PostMapping("/{inviteCode}/end")
 	public RoomResponse end(@PathVariable String inviteCode) {
-		Room room = roomService.end(inviteCode);
+		Room room = roomEndService.end(inviteCode);
 		roomSessionRegistry.broadcast(room.getInviteCode(), RoomStatusMessage.from(room));
 		return toResponse(room);
 	}
