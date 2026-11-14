@@ -19,7 +19,7 @@ class MarketWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
-		registry.addEndpoint("/api/ws");
+		registry.addEndpoint("/api/ws/market");
 	}
 
 	@Override
