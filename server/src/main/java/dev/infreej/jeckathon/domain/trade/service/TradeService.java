@@ -33,8 +33,16 @@ public class TradeService {
 
 	/** 현재 집계 구간의 방 합계를 돌려주고 0으로 초기화한다. 거래가 없던 방은 {@link TradeCount#ZERO}. */
 	public TradeCount drain(String roomId) {
+		return drainWithParticipants(roomId).count();
+	}
+
+	public TradeSnapshot drainWithParticipants(String roomId) {
 		RoomBucket bucket = roomId == null ? null : buckets.get(roomId);
-		return bucket == null ? TradeCount.ZERO : bucket.drain();
+		return bucket == null ? TradeSnapshot.EMPTY : bucket.drain();
+	}
+
+	public record TradeSnapshot(TradeCount count, int participantCount) {
+		static final TradeSnapshot EMPTY = new TradeSnapshot(TradeCount.ZERO, 0);
 	}
 
 	public void clearRoom(String roomId) {
