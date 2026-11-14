@@ -1,6 +1,6 @@
-package dev.infreej.jeckathon.gateway.ws;
+package dev.infreej.jeckathon.global.websocket;
 
-import static dev.infreej.jeckathon.gateway.ws.FakeSessions.*;
+import static dev.infreej.jeckathon.global.websocket.FakeSessions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

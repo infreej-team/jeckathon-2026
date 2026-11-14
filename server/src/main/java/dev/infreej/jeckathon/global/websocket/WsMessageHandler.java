@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.gateway.ws;
+package dev.infreej.jeckathon.global.websocket;
 
 import org.springframework.web.socket.WebSocketSession;
 

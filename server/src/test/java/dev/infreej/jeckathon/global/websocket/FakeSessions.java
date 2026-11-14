@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.gateway.ws;
+package dev.infreej.jeckathon.global.websocket;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;

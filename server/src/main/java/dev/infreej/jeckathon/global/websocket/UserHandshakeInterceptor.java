@@ -1,4 +1,4 @@
-package dev.infreej.jeckathon.gateway.ws;
+package dev.infreej.jeckathon.global.websocket;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;

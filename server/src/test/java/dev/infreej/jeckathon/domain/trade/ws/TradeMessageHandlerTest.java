@@ -1,6 +1,6 @@
 package dev.infreej.jeckathon.domain.trade.ws;
 
-import static dev.infreej.jeckathon.gateway.ws.FakeSessions.*;
+import static dev.infreej.jeckathon.global.websocket.FakeSessions.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -10,7 +10,7 @@ import org.springframework.web.socket.WebSocketSession;
 
 import dev.infreej.jeckathon.domain.trade.TradeCount;
 import dev.infreej.jeckathon.domain.trade.TradeService;
-import dev.infreej.jeckathon.gateway.ws.WsSender;
+import dev.infreej.jeckathon.global.websocket.WsSender;
 import tools.jackson.databind.JsonNode;
 
 class TradeMessageHandlerTest {

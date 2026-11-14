@@ -1,6 +1,6 @@
 package dev.infreej.jeckathon.domain.trade.ws;
 
-import static dev.infreej.jeckathon.gateway.ws.FakeSessions.json;
+import static dev.infreej.jeckathon.global.websocket.FakeSessions.json;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;

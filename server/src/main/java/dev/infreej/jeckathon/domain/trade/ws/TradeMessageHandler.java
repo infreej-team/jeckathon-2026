@@ -5,9 +5,9 @@ import org.springframework.web.socket.WebSocketSession;
 
 import dev.infreej.jeckathon.domain.trade.TradeCount;
 import dev.infreej.jeckathon.domain.trade.TradeService;
-import dev.infreej.jeckathon.gateway.ws.UserHandshakeInterceptor;
-import dev.infreej.jeckathon.gateway.ws.WsMessageHandler;
-import dev.infreej.jeckathon.gateway.ws.WsSender;
+import dev.infreej.jeckathon.global.websocket.UserHandshakeInterceptor;
+import dev.infreej.jeckathon.global.websocket.WsMessageHandler;
+import dev.infreej.jeckathon.global.websocket.WsSender;
 import lombok.RequiredArgsConstructor;
 import tools.jackson.databind.JsonNode;
 
