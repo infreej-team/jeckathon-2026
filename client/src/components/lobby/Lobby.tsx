@@ -7,7 +7,7 @@ import { placeholderQuote } from "@/lib/placeholder";
 import { fetchRooms, type Room } from "@/lib/rooms";
 import { stageLabel, teamOf, type TeamView } from "@/lib/teams";
 
-import { AntIcon, ArrowIcon, ReceiptIcon, TrendIcon, TrophyIcon, UserIcon } from "./icons";
+import { AntIcon, ArrowIcon, ReceiptIcon, TrendIcon, TrophyIcon } from "./icons";
 import { Sparkline } from "./Sparkline";
 
 const REFRESH_MS = 10_000;
@@ -142,9 +142,6 @@ function Header() {
           <p className="mt-1 text-[10px] tracking-[0.2em] text-neutral-600">개미들의 경기장</p>
         </div>
       </div>
-      <span className="flex size-11 items-center justify-center rounded-full border-2 border-ink" aria-hidden="true">
-        <UserIcon className="size-5" />
-      </span>
     </header>
   );
 }
