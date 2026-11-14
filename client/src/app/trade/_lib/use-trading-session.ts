@@ -18,7 +18,6 @@ export type MatchEvent = { seq: number; label: string; side: Side };
 type SessionState = {
   ticks: Tick[];
   pending: Counts;
-  total: number;
   crowd: Counts;
 };
 
@@ -66,7 +65,6 @@ function initialTicks(): Tick[] {
 const INITIAL: SessionState = {
   ticks: initialTicks(),
   pending: { buy: 0, sell: 0 },
-  total: 27,
   crowd: { buy: 412, sell: 194 },
 };
 
@@ -90,7 +88,6 @@ export function useTradingSession() {
             { seq: last.seq + 1, price: Math.max(1, round2(last.price + net * PRICE_PER_ORDER)), buy, sell },
           ],
           pending: { buy: 0, sell: 0 },
-          total: s.total,
           crowd: { buy: clamp(s.crowd.buy + net, 0, 1500), sell: clamp(s.crowd.sell - net, 0, 1500) },
         };
       });
@@ -101,7 +98,7 @@ export function useTradingSession() {
   const press = useCallback((side: Side) => {
     setState((s) => {
       if (s.pending[side] >= LIMIT_PER_SECOND) return s;
-      return { ...s, pending: { ...s.pending, [side]: s.pending[side] + 1 }, total: s.total + 1 };
+      return { ...s, pending: { ...s.pending, [side]: s.pending[side] + 1 } };
     });
   }, []);
 
@@ -114,7 +111,6 @@ export function useTradingSession() {
     ticks,
     events: EVENTS.filter((e) => e.seq >= firstSeq),
     pending: state.pending,
-    total: state.total,
     crowd: state.crowd,
     price: last.price,
     secondRate: ((last.price - prev.price) / prev.price) * 100,
