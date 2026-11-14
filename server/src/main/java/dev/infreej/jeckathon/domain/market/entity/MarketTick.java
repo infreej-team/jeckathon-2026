@@ -9,17 +9,17 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 // 방의 1초 단위 시세 기록
 @Entity
-@Table(name = "market_tick", indexes = @Index(name = "idx_market_tick_room_ticked_at", columnList = "room_id, ticked_at"))
+@Table(name = "market_tick", uniqueConstraints = @UniqueConstraint(name = "uk_market_tick_room_ticked_at", columnNames = {"room_id", "ticked_at"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MarketTick {
