@@ -18,6 +18,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import dev.infreej.jeckathon.domain.market.repository.MarketTickRepository;
+import dev.infreej.jeckathon.domain.room.repository.RoomRepository;
 import dev.infreej.jeckathon.domain.trade.dto.TradeCount;
 import dev.infreej.jeckathon.domain.trade.service.TradeService;
 
@@ -25,6 +27,9 @@ import dev.infreej.jeckathon.domain.trade.service.TradeService;
 class TradeWebSocketIntegrationTest {
 	@Value("${local.server.port}") int port;
 	@MockitoBean TradeService tradeService;
+	// DB 자동 설정을 뺐으므로 저장소 빈은 목으로 채운다.
+	@MockitoBean RoomRepository roomRepository;
+	@MockitoBean MarketTickRepository marketTickRepository;
 
 	@Test
 	void 접속해서_trade를_보내면_ack를_받는다() throws Exception {

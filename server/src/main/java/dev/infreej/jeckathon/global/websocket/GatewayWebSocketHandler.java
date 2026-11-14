@@ -23,12 +23,15 @@ import tools.jackson.databind.ObjectMapper;
 public class GatewayWebSocketHandler extends TextWebSocketHandler {
 
 	private final Map<String, WsMessageHandler> handlers;
+	private final List<WsSessionCloseListener> closeListeners;
 	private final WsSender sender;
 	private final ObjectMapper objectMapper;
 
-	public GatewayWebSocketHandler(List<WsMessageHandler> handlers, WsSender sender, ObjectMapper objectMapper) {
+	public GatewayWebSocketHandler(List<WsMessageHandler> handlers, List<WsSessionCloseListener> closeListeners,
+			WsSender sender, ObjectMapper objectMapper) {
 		// type이 겹치면 Collectors.toMap이 IllegalStateException을 던져 앱이 뜨지 않는다.
 		this.handlers = handlers.stream().collect(Collectors.toMap(WsMessageHandler::type, Function.identity()));
+		this.closeListeners = closeListeners;
 		this.sender = sender;
 		this.objectMapper = objectMapper;
 	}
@@ -62,6 +65,13 @@ public class GatewayWebSocketHandler extends TextWebSocketHandler {
 
 	@Override
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+		for (WsSessionCloseListener listener : closeListeners) {
+			try {
+				listener.onClose(session);
+			} catch (RuntimeException e) {
+				log.error("웹소켓 종료 처리 실패 session={}", session.getId(), e);
+			}
+		}
 		sender.unregister(session);
 	}
 }
