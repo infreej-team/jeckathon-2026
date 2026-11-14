@@ -22,7 +22,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "팬닥 FANDAQ",
+  title: "개경장",
   description: "경기 보면서 팬심을 사고파는 실시간 팬심 주식",
 };
 
