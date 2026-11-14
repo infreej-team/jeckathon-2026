@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: server
+  datasource:
+    # 기본값은 로컬 개발용 DB(compose.yaml)다. 운영에서는 compose.prod.yaml이 환경 변수로 넘긴다.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:jeckathon}
+    username: ${DB_USER:jeckathon}
+    password: ${DB_PASSWORD:1234}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # 해커톤 기간에는 엔티티 변경을 스키마에 바로 반영한다. 컬럼 삭제·이름 변경은 반영되지 않는다.
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+
+server:
+  port: 8080
+  # nginx가 넘긴 X-Forwarded-* 헤더로 원래 요청의 스킴과 클라이언트 IP를 복원한다.
+  forward-headers-strategy: native
