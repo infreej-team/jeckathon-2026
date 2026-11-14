@@ -1,0 +1,42 @@
+.page {
+  width: min(100%, 430px);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding: 16px;
+  background: #fafaf7;
+  color: #111;
+}
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.header a, .header button { border: 2px solid; border-radius: 12px; padding: 7px 10px; }
+.card { margin-bottom: 14px; padding: 16px; border: 2px solid; border-radius: 20px; background: white; box-shadow: 3px 3px #111; }
+.card h1, .card h2 { font-weight: 800; font-size: 1.2rem; }
+.meta { display: flex; gap: 12px; color: #555; font-size: .85rem; }
+.value { font-size: 2.25rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.chart { width: 100%; margin-top: 10px; }
+.chart line { stroke: #ddd; stroke-dasharray: 3 4; }
+.chart polyline { stroke: #2b59f0; stroke-width: 2; fill: none; }
+.chart circle { fill: #2b59f0; }
+.chart text { font-size: 10px; fill: #555; }
+.actions { display: flex; gap: 8px; margin-block: 10px; }
+.actions button { flex: 1; border: 2px solid; padding: 8px; border-radius: 12px; font-weight: 700; }
+.actions button:first-child { color: #b41c31; }
+.actions button:last-child { color: #2147bd; }
+.actions button:disabled { opacity: .45; }
+.error { color: #a51529; margin-bottom: 10px; }
+
+@media (orientation: landscape) and (min-width: 600px), (min-width: 960px) {
+  .page {
+    display: grid;
+    width: min(100%, 1120px);
+    grid-template-columns: minmax(0, 2fr) minmax(225px, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    align-items: start;
+    gap: 16px;
+  }
+
+  .header, .error { grid-column: 1 / -1; margin-bottom: 0; }
+  .roomCard { grid-column: 2; grid-row: 3; }
+  .chartCard { grid-column: 1; grid-row: 3 / 5; }
+  .tradeCard { grid-column: 2; grid-row: 4; }
+  .card { min-width: 0; margin-bottom: 0; }
+}
