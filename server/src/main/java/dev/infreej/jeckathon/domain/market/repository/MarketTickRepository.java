@@ -25,7 +25,7 @@ public interface MarketTickRepository extends JpaRepository<MarketTick, Long> {
 	@Query("""
 		select min(t.indexValue) as lowestValue, max(t.indexValue) as highestValue,
 		       sum(t.buyCount) as totalBuys, sum(t.sellCount) as totalSells
-		from MarketTick t where t.roomId = :roomId
+		from MarketTick t where t.room.id = :roomId
 		""")
 	TickTotals summarizeByRoomId(@Param("roomId") Long roomId);
 
