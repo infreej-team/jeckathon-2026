@@ -45,6 +45,7 @@ public class MarketService {
 		);
 	}
 
+	// 거래가 없던 1초는 지수가 변하지 않으므로 저장하지 않는다. 클라이언트가 빈 구간을 직전 값으로 채운다.
 	@Scheduled(fixedRate = 1_000)
 	synchronized void recordActiveRooms() {
 		for (Room room : roomService.getLiveRooms()) {
@@ -53,7 +54,7 @@ public class MarketService {
 					continue;
 				}
 				if (!savePendingTick(room)) {
-					recordTick(room, false);
+					recordTick(room);
 				}
 			} catch (RuntimeException failure) {
 				log.error("Could not record market tick for room {}", room.getId(), failure);
@@ -64,20 +65,20 @@ public class MarketService {
 	// Call after the room is no longer active and trade intake has closed.
 	public synchronized void finishRoom(Room room) {
 		savePendingTick(room);
-		recordTick(room, true);
+		recordTick(room);
 		tradeService.clearRoom(room.getInviteCode());
 	}
 
-	private void recordTick(Room room, boolean skipEmpty) {
+	private void recordTick(Room room) {
 		Long roomId = room.getId();
-		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickedAtDesc(roomId);
 		// Trade messages use the invite code as their room key.
 		TradeSnapshot snapshot = tradeService.drainWithParticipants(room.getInviteCode());
 		TradeCount volume = snapshot.count();
-		if (skipEmpty && TradeCount.ZERO.equals(volume)) {
+		if (TradeCount.ZERO.equals(volume)) {
 			return;
 		}
 		int participantCount = snapshot.participantCount();
+		Optional<MarketTick> previous = repository.findFirstByRoomIdOrderByTickedAtDesc(roomId);
 
 		Instant tickedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
 		Instant previousTime = previous.map(MarketTick::getTickedAt).orElse(Instant.MIN);
