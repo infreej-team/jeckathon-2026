@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ScoreBar } from "@/components/replays/ScoreBar";
+import { toTimeSeries } from "@/lib/market-series";
 import { fetchAllTicks, replayGrade, type MarketTick } from "@/lib/results";
 import type { TeamView } from "@/lib/teams";
 
@@ -24,12 +25,27 @@ type Summary = {
   sells: number;
 };
 
+// 서버는 거래가 있던 초에만 틱을 저장하므로, 차트는 개장부터 마감까지를 같은 간격으로 나눠
+// 거래가 없던 구간을 직전 지수로 채운다.
+function chartOf(ticks: MarketTick[], startedAt: string | null, endedAt: string | null): Tick[] {
+  const timed = ticks.map((t) => ({ time: Date.parse(t.recordedAt), price: t.indexValue, buy: t.buyCount, sell: t.sellCount }));
+  const first = timed[0]?.time;
+  const last = timed.at(-1)?.time;
+  if (first === undefined || last === undefined) return [];
+  const from = startedAt ? Math.min(Date.parse(startedAt), first) : first;
+  const to = endedAt ? Math.max(Date.parse(endedAt), last) : last;
+  const count = Math.min(CHART_POINTS, Math.floor((to - from) / 1000) + 1);
+  return toTimeSeries(timed, from, to, Math.max(count, 2), LISTING_PRICE).map((t) => ({
+    seq: Math.round(t.time),
+    price: t.price,
+    buy: t.buy,
+    sell: t.sell,
+  }));
+}
+
 // 최고·최저는 서버 결산처럼 상장가를 포함해 센다.
-function summarize(ticks: MarketTick[]): Summary {
-  const step = Math.max(Math.ceil(ticks.length / CHART_POINTS), 1);
-  const chart = ticks
-    .filter((_, i) => i % step === 0 || i === ticks.length - 1)
-    .map((t) => ({ seq: t.tickId, price: t.indexValue, buy: t.buyCount, sell: t.sellCount }));
+function summarize(ticks: MarketTick[], startedAt: string | null, endedAt: string | null): Summary {
+  const chart = chartOf(ticks, startedAt, endedAt);
   const prices = ticks.map((t) => t.indexValue);
   return {
     chart,
@@ -63,17 +79,19 @@ export function RoomResult() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [ticksFailed, setTicksFailed] = useState(false);
   const ended = info?.room.status === "ENDED";
+  const startedAt = info?.room.startedAt ?? null;
+  const endedAt = info?.room.endedAt ?? null;
 
   useEffect(() => {
     if (!ended) return;
     const controller = new AbortController();
     fetchAllTicks(inviteCode, controller.signal)
-      .then((ticks) => setSummary(summarize(ticks)))
+      .then((ticks) => setSummary(summarize(ticks, startedAt, endedAt)))
       .catch(() => {
         if (!controller.signal.aborted) setTicksFailed(true);
       });
     return () => controller.abort();
-  }, [inviteCode, ended]);
+  }, [inviteCode, ended, startedAt, endedAt]);
 
   if (!info) {
     return (

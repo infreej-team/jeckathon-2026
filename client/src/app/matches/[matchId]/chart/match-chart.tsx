@@ -2,12 +2,17 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { recentSeconds } from '@/lib/market-series';
 import styles from './chart.module.css';
 
 type Status = 'WAITING' | 'LIVE' | 'ENDED';
 type Room = { roomId: number; inviteCode: string; name: string; status: Status };
 type Tick = { tickId: number; recordedAt: string; indexValue: number; buyCount: number; sellCount: number };
 const statusText = { WAITING: '경기 대기', LIVE: '경기 진행 중', ENDED: '경기 종료' };
+// 차트에 보여 줄 최근 초 수
+const CHART_SECONDS = 120;
+// 서버 MarketIndex.INITIAL_VALUE
+const LISTING_PRICE = 100;
 
 async function get<T>(url: string, signal: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal, cache: 'no-store' });
@@ -54,7 +59,10 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
   const path = '/matches/' + encodeURIComponent(inviteCode);
   const [room, setRoom] = useState<Room | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
-  const [ticks, setTicks] = useState<Tick[]>([]);
+  // 서버는 거래가 있던 초에만 틱을 저장한다. base는 이 틱들보다 앞선 시점의 지수다.
+  const [history, setHistory] = useState<{ ticks: Tick[]; base: number; fetchedAt: number }>(
+    { ticks: [], base: LISTING_PRICE, fetchedAt: 0 },
+  );
   const [participants, setParticipants] = useState<number | null>(null);
   const [joined, setJoined] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -70,10 +78,17 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
         const data = await get<Room>(api, controller.signal);
         setRoom(data);
         setStatus(data.status);
-        const history = await get<{ items: Tick[] }>(
-          '/api/rooms/' + data.roomId + '/market/ticks?size=120', controller.signal,
+        // 하나 더 받아서, 차트 구간보다 앞선 지수를 알아낸다.
+        const page = await get<{ items: Tick[] }>(
+          '/api/rooms/' + data.roomId + '/market/ticks?size=' + (CHART_SECONDS + 1), controller.signal,
         );
-        setTicks([...history.items].reverse());
+        const items = [...page.items].reverse();
+        const complete = items.length <= CHART_SECONDS;
+        setHistory({
+          ticks: complete ? items : items.slice(1),
+          base: complete ? LISTING_PRICE : items[0].indexValue,
+          fetchedAt: Date.now(),
+        });
         setLoadError('');
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -142,6 +157,7 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
     }));
   }
 
+  const ticks = toChartTicks(history.ticks, history.base, history.fetchedAt, status === 'LIVE');
   const latest = ticks.at(-1);
   return (
     <main className={styles.page}>
@@ -184,4 +200,22 @@ export default function MatchChart({ inviteCode }: { inviteCode: string }) {
       </section>
     </main>
   );
+}
+
+// 거래가 없던 초는 직전 지수로 채워 최근 CHART_SECONDS초를 1초 간격으로 만든다.
+// 경기 중이면 조회 시각까지, 아니면 마지막 틱까지 그린다.
+function toChartTicks(stored: Tick[], base: number, fetchedAt: number, live: boolean): Tick[] {
+  const timed = stored.map((tick) => ({
+    time: Date.parse(tick.recordedAt), price: tick.indexValue, buy: tick.buyCount, sell: tick.sellCount,
+  }));
+  const lastTime = timed.at(-1)?.time;
+  if (fetchedAt === 0 || (!live && lastTime === undefined)) return [];
+  const end = live ? Math.max(fetchedAt, lastTime ?? fetchedAt) : (lastTime ?? fetchedAt);
+  return recentSeconds(timed, end, CHART_SECONDS, base).map((point) => ({
+    tickId: point.time,
+    recordedAt: new Date(point.time).toISOString(),
+    indexValue: point.price,
+    buyCount: point.buy,
+    sellCount: point.sell,
+  }));
 }
