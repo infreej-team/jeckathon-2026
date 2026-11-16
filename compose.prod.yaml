@@ -6,16 +6,17 @@ x-common: &common
       max-size: "10m"
       max-file: "3"
 
-# 메모리 배분 (4GB 인스턴스): nginx 128m + client 512m + server 1g + db 1g = 약 2.6GB
-# 남은 약 1.4GB는 OS, Docker 데몬, 이미지 pull 작업에 쓴다.
+# 메모리 상한 합계: nginx 128m + client 512m + server 1g + db 1g = 약 2.6GB
 services:
   nginx:
     <<: *common
     # 설정 파일은 이미지에 들어 있고, 인증서만 서버에서 마운트한다.
     image: "${NGINX_IMAGE:?NGINX_IMAGE를 .env.prod에 지정해야 한다}"
+    # 외부 요청은 서버 호스트에 설치한 cloudflared(Cloudflare Tunnel)가 https://localhost:443으로 넘긴다.
+    # 공유기나 LAN에 노출하지 않도록 루프백에만 연다.
+    # cloudflared를 compose 밖에 두는 이유: 배포 SSH도 같은 터널을 지나므로, up -d로 터널이 재시작되면 배포가 끊긴다.
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:443:443"
     volumes:
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:

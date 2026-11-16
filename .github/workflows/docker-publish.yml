@@ -105,7 +105,10 @@ jobs:
           done
 
   # 서버에 SSH로 접속해 compose.prod.yaml을 갱신하고 pull과 up -d를 실행한다.
-  # 필요한 production 환경 Secrets: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS
+  # 서버는 포트를 공개하지 않으므로 SSH도 Cloudflare Tunnel로 접속한다.
+  # Cloudflare Access가 서비스 토큰을 확인한 요청만 터널로 넘긴다.
+  # 필요한 production 환경 Secrets: DEPLOY_HOST(터널의 SSH 호스트명), DEPLOY_USER, DEPLOY_SSH_KEY,
+  # DEPLOY_SSH_KNOWN_HOSTS, CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET
   deploy:
     needs: tag-latest
     if: github.ref == 'refs/heads/main'
@@ -116,12 +119,21 @@ jobs:
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      # ssh가 ProxyCommand를 실행할 때 읽는다. 설정 파일에 값을 쓰지 않기 위해 job 환경 변수로 둔다.
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       # SSH 접속 시 홈 디렉터리에서 시작하므로 홈 기준 상대 경로로 둔다.
-      DEPLOY_DIR: jeckathon
+      DEPLOY_DIR: apps/jeckathon-2026
       COMPOSE: docker compose -f compose.prod.yaml --env-file .env.prod
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install cloudflared
+        run: |
+          curl -fsSL -o /tmp/cloudflared.deb \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i /tmp/cloudflared.deb
 
       # 호스트 키를 Secret으로 고정해, 처음 접속하는 서버를 그대로 신뢰하지 않는다.
       - name: Set up SSH
@@ -140,6 +152,7 @@ jobs:
             IdentityFile ~/.ssh/deploy_key
             IdentitiesOnly yes
             StrictHostKeyChecking yes
+            ProxyCommand cloudflared access ssh --hostname %h --service-token-id \$CF_ACCESS_CLIENT_ID --service-token-secret \$CF_ACCESS_CLIENT_SECRET
           EOF
 
       # 서버의 compose.prod.yaml은 저장소 파일의 복사본이므로 배포할 때마다 덮어쓴다.

@@ -4,11 +4,12 @@
 
 - 해커톤(Jeckathon 2026) 출품 서비스 저장소다. 서비스 주제는 아직 정하지 않았다.
 - 스택: `server/`는 Java 21, Spring Boot 4, Spring Data JPA, Gradle이고 `client/`는 Next.js 16(App Router, TypeScript, Tailwind CSS), npm이다. DB는 PostgreSQL 18이다.
-- 배포 대상은 AWS Lightsail 단일 서버이며, Docker Compose로 컨테이너를 실행하고 Nginx를 리버스 프록시로 둔다.
-- 도메인은 `jeckathon.infreej.dev`이고 Cloudflare로 DNS와 HTTPS를 처리한다.
+- 배포 대상은 홈서버(Linux 맥미니, x86_64) 한 대이며, Docker Compose로 컨테이너를 실행하고 Nginx를 리버스 프록시로 둔다. 프로젝트 폴더는 `~/apps/jeckathon-2026`이다.
+- 도메인은 `jeckathon.infreej.dev`이고 Cloudflare Tunnel로 외부 요청을 받는다. 서버 호스트에 서비스로 설치한 `cloudflared`가 `https://localhost:443`(nginx)으로 전달하며, 서버는 외부에 포트를 공개하지 않는다. 터널의 공개 호스트명과 전달 대상은 Cloudflare 대시보드에서 관리한다.
 - 배포는 `main`에 병합하면 GitHub Actions가 `client/`, `server/`, `nginx/` 이미지를 빌드해 GHCR에 push하고, 서버에 SSH로 접속해 `compose.prod.yaml`을 복사한 뒤 `docker compose -f compose.prod.yaml --env-file .env.prod pull`과 `up -d`로 반영한다. 서버에서는 빌드하지 않는다.
-- `main`에 병합한 코드는 바로 운영 서버에 나간다. 시연 직전에는 병합을 멈춘다.
-- 자동 배포는 `production` 환경 Secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_SSH_KNOWN_HOSTS`를 사용한다. 이 환경은 `main`에서만 쓸 수 있게 제한되어 있으므로 저장소 Secrets에 같은 값을 넣지 않는다. 서버의 `.env.prod`와 인증서는 자동 배포가 건드리지 않으므로 바꿀 때는 서버에서 직접 수정한다.
+- 배포 SSH도 같은 터널을 지난다. Cloudflare Access가 서비스 토큰을 확인한 요청만 서버 SSH로 넘긴다.
+- `main`에 병합한 코드는 바로 운영 서버에 나간다.
+- 자동 배포는 `production` 환경 Secrets `DEPLOY_HOST`(터널의 SSH 호스트명), `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_SSH_KNOWN_HOSTS`, `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`을 사용한다. 이 환경은 `main`에서만 쓸 수 있게 제한되어 있으므로 저장소 Secrets에 같은 값을 넣지 않는다. 서버의 `.env.prod`와 인증서는 자동 배포가 건드리지 않으므로 바꿀 때는 서버에서 직접 수정한다.
 - `compose.prod.yaml`에 새 환경 변수가 필요한 PR은 병합하기 전에 서버 `.env.prod`에 값을 먼저 추가한다. 값이 없으면 배포가 compose 검증 단계에서 멈춘다.
 - 롤백으로 `.env.prod`의 `IMAGE_TAG`를 sha 태그로 고정한 동안에는 병합해도 이미지가 바뀌지 않는다. `compose.prod.yaml`은 계속 최신본으로 덮어쓴다.
 
